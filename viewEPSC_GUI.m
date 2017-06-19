@@ -721,10 +721,12 @@ if viewLoadDrop.Value ~= 2 %Maybe old settings exist in which case load them
 end
 
 targetCorr = find(targets(:,6) ~= targets(:,8) & targets(:,6));
-for ii = targetCorr
-    %No saved targets every coordinate is real mini
-    miniTargets{ii} = [true(size(miniCoords{ii},1),1),...
-        false(size(miniCoords{ii},1),1)];
+if ~isempty(targetCorr)
+    for ii = targetCorr
+        %No saved targets every coordinate is real mini
+        miniTargets{ii} = [true(size(miniCoords{ii},1),1),...
+            false(size(miniCoords{ii},1),1)];
+    end
 end
 %Set variables again
 setappdata(viewEPSC,'ephysFltr',ephysFltr);
