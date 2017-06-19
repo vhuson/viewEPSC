@@ -95,19 +95,19 @@ viewLastName = uicontrol(viewEPSC,'Style','pushbutton','String','>>',...
     'Units','normalized','Position', [0.355 0.94 0.025 0.04], 'Tag','viewLastName',...
     'Callback', @viewEPSC_fileChange);
 
-%% Link interface
-viewLinkText = uicontrol(viewEPSC, 'Style','text','String','Link data:',...
-    'Units','normalized','Position', [0.385 0.93 0.07 0.04], 'Tag',...
-    'viewLinkText','Enable','off');
-viewLinkCheck = uicontrol(viewEPSC,'Style','checkbox',...
-    'Units','normalized','Position', [0.445 0.935 0.025 0.04], 'Tag',...
-    'viewLinkCheck','Callback', @viewEPSC_linkFile,'Value',0,'Enable','off');
-viewLinkDrop = uicontrol(viewEPSC,'Style','popup','String','[No links found]',...
-    'Units','normalized','Position', [0.47 0.88 0.25 0.1], 'Tag',...
-    'viewLinkDrop','Callback', @viewEPSC_linkFile,'Enable','off');
-viewLinkSelect = uicontrol(viewEPSC,'Style','pushbutton','String','Select',...
-    'Units','normalized','Position', [0.72 0.94 0.08 0.04], 'Tag',...
-    'viewLinkSelect','Callback', @viewEPSC_linkFile,'Enable','off');
+%% Blind interface
+% viewBlindText = uicontrol(viewEPSC, 'Style','text','String','Blind data:',...
+%     'Units','normalized','Position', [0.385 0.93 0.1 0.04], 'Tag',...
+%     'viewBlindText','Enable','off');
+viewBlindCheck = uicontrol(viewEPSC,'Style','checkbox','String','Blind data',...
+    'Units','normalized','Position', [0.385 0.935 0.1 0.04], 'Tag',...
+    'viewBlindCheck','Callback', @viewEPSC_BlindFile,'Value',0,'Enable','on');
+% viewBlindDrop = uicontrol(viewEPSC,'Style','popup','String','[No Blinds found]',...
+%     'Units','normalized','Position', [0.47 0.88 0.25 0.1], 'Tag',...
+%     'viewBlindDrop','Callback', @viewEPSC_BlindFile,'Enable','off');
+% viewRevealCheck = uicontrol(viewEPSC,'Style','checkbox','String','Reveal',...
+%     'Units','normalized','Position', [0.72 0.94 0.08 0.04], 'Tag',...
+%     'viewRevealCheck','Callback', @viewEPSC_BlindFile,'Enable','off');
 
 %% Load and manage data
 %viewFrame = uipanel(viewEPSC, 'Units','normalized','Position', [0.81 0.08 0.185 0.915]);
@@ -317,7 +317,7 @@ miniSettings = getappdata(viewEPSC,'miniSettings');
 miniSetting = miniSettings{viewNamesDrop.Value};
 
 %Get current data and si
-filename = viewNamesDrop.String{viewNamesDrop.Value};
+filename = plotFltr{viewNamesDrop.Value,1};
 fileData = retrieveEphys(filename,'data',dataPath); fileData = fileData{1}(:,1);
 %Assume from abf in microsecond
 fileSI = retrieveEphys(filename,'si',dataPath); fileSI = fileSI{1};
@@ -519,6 +519,13 @@ function viewEPSC_loadData(viewLoadDrop,inputFltr)
 %Get relevant objects
 viewEPSC = findobj('Tag', 'viewEPSC');
 viewNamesDrop = findobj('Tag','viewNamesDrop');
+
+%Unblind data if necessary
+viewBlindCheck = findobj('Tag','viewBlindCheck');
+if viewBlindCheck.Value
+    viewBlindCheck.Value = false;
+    viewEPSC_BlindFile(viewBlindCheck);
+end
 
 plotUpdate = false;
 
@@ -2472,7 +2479,7 @@ if removeArtifacts  %Make block artifacts red
         blockLength = block(1)+(1/block(3)*block(2));
         
         dataTrace = findobj('Tag','viewDataTrace');
-        filename = viewNamesDrop.String{viewNamesDrop.Value};
+        filename = artFltr{viewNamesDrop.Value,1};
         fileData = retrieveEphys(filename,'data',dataPath); fileData = fileData{1}(:,1);
         
         %See if settings are valid
@@ -3709,69 +3716,86 @@ switch hObject.Tag
     case 'viewANNDiscard'
         miniTarget(miniCurrIdx,:) = [0 1];
         
-        %Get surrounding events
-        currCoord = miniCoord(miniCurrIdx,1);
-        markCoord = miniCoord(miniTarget(:,1),:);
-        markFeature = miniFeature(miniTarget(:,1),:);
-        rangeEvents = find(currCoord>markCoord(:,1),1,'last');
-        rangeEvents = [rangeEvents, find(currCoord<markCoord(:,1),1,'first')];
-        
-        %Check for doubles
-        if ~isempty(rangeEvents)
-            doubleEvents = diff(markCoord(unique(...
-                [max([1,rangeEvents(1)-1]),rangeEvents,...
-                min([size(markCoord,1),rangeEvents(end)+1])]),1))...
-                *fileSI < 0.03;
-            if numel(doubleEvents) == 1
-                markFeature(rangeEvents(1),9) = doubleEvents;
-            else
-                for i=1:numel(rangeEvents)
-                    if any(doubleEvents(i:i+1))
-                        markFeature(rangeEvents(i),9) = true;
+        %Check if double event
+        if ~isnan(miniFeature(miniCurrIdx,9)) && miniFeature(miniCurrIdx,9)
+            %Get surrounding events
+            currCoord = miniCoord(miniCurrIdx,1);
+            markCoord = miniCoord(miniTarget(:,1),:);
+            markFeature = miniFeature(miniTarget(:,1),:);
+            rangeEvents = find(currCoord>markCoord(:,1),1,'last');
+            rangeEvents = [rangeEvents, find(currCoord<markCoord(:,1),1,'first')];
+            
+            %Check for doubles
+            if ~isempty(rangeEvents)
+                calcRange = false(size(rangeEvents));
+                doubleEvents = diff(markCoord(unique(...
+                    [max([1,rangeEvents(1)-1]),rangeEvents,...
+                    min([size(markCoord,1),rangeEvents(end)+1])]),1))...
+                    *fileSI < 0.03;
+                %correct for wrong number of double events
+                if numel(doubleEvents) < numel(rangeEvents)+1
+                    if rangeEvents(1) == 1
+                       doubleEvents = [false; doubleEvents];
                     else
-                        markFeature(rangeEvents(i),9) = false;
+                        doubleEvents = [doubleEvents; false];
                     end
                 end
-            end
-            
-            
-            %Calculate parameters
-            for i=rangeEvents
-                bDouble=markFeature(i,9);
                 
-                
-                pre = max([1, markCoord(i,1)-0.03/fileSI+1]);
-                post = min([numel(fileData), pre-1+0.07/fileSI]);
-                
-                if i+1 > size(markCoord,1)
-                    distance = diff([markCoord(i,1),xStop/fileSI]);
-                    preDistance = diff(markCoord(i-1:i,1));
-                elseif i==1
-                    distance = diff(markCoord(i:i+1,1));
-                    preDistance = diff([xStart/fileSI,markCoord(i,1)]);
+                if numel(doubleEvents) == 1
+                    markFeature(rangeEvents(1),9) = doubleEvents;
                 else
-                    distance = diff(markCoord(i:i+1,1));
-                    preDistance = diff(markCoord(i-1:i,1));
+                    for i=1:numel(rangeEvents)
+                        if any(doubleEvents(i:i+1))
+                            markFeature(rangeEvents(i),9) = true;
+                            calcRange(i) = true;
+                        else
+                            calcRange(i) = markFeature(rangeEvents(i),9);
+                            markFeature(rangeEvents(i),9) = false;
+                        end
+                    end
                 end
                 
-                %Features
-                %1:Amplitude; 2:rise time, 3:baseline, 4:decayTau, 5:50%X, 6:50%Y,
-                %7:fit area, 8:sum Area, 9:double?
-                [newCoord, newFeature] = ...
-                    viewGetMiniParameters(fileData(pre:post),fileSI,bDouble,...
-                    distance,preDistance);
+                %Select only double or changed events
+                rangeEvents = rangeEvents(logical(calcRange));
                 
-                %Set new coordinates
-                markCoord(i,1) = markCoord(i,1)+newCoord(1,1);
-                markCoord(i,2) = newCoord(1,2);
-                
-                %set features
-                markFeature(i,:) = newFeature;
-                
+                %Calculate parameters
+                for i=rangeEvents
+                    bDouble=markFeature(i,9);
+                    
+                    
+                    pre = max([1, markCoord(i,1)-0.03/fileSI+1]);
+                    post = min([numel(fileData), pre-1+0.07/fileSI]);
+                    
+                    if i+1 > size(markCoord,1)
+                        distance = diff([markCoord(i,1),xStop/fileSI]);
+                        preDistance = diff(markCoord(i-1:i,1));
+                    elseif i==1
+                        distance = diff(markCoord(i:i+1,1));
+                        preDistance = diff([xStart/fileSI,markCoord(i,1)]);
+                    else
+                        distance = diff(markCoord(i:i+1,1));
+                        preDistance = diff(markCoord(i-1:i,1));
+                    end
+                    
+                    %Features
+                    %1:Amplitude; 2:rise time, 3:baseline, 4:decayTau, 5:50%X, 6:50%Y,
+                    %7:fit area, 8:sum Area, 9:double?
+                    [newCoord, newFeature] = ...
+                        viewGetMiniParameters(fileData(pre:post),fileSI,bDouble,...
+                        distance,preDistance);
+                    
+                    %Set new coordinates
+                    markCoord(i,1) = markCoord(i,1)+newCoord(1,1);
+                    markCoord(i,2) = newCoord(1,2);
+                    
+                    %set features
+                    markFeature(i,:) = newFeature;
+                    
+                end
+                %Save new features
+                miniCoord(miniTarget(:,1),:) = markCoord;
+                miniFeature(miniTarget(:,1),:) = markFeature;
             end
-            %Save new features
-            miniCoord(miniTarget(:,1),:) = markCoord;
-            miniFeature(miniTarget(:,1),:) = markFeature;
         end
         %Advance position unless its the last one
         miniCurrIdx = min([miniCurrIdx+1,numel(viewANNEventDrop.String)]);
@@ -3974,6 +3998,7 @@ if freshDetect
     
     %Update status
     viewANNStatus.String = 'Detection finished';
+    
 end
 
 
@@ -4433,7 +4458,15 @@ viewEPSC = findobj('Tag', 'viewEPSC');
 viewPlot = findobj('Tag','viewPlot');
 viewNamesDrop = findobj('Tag','viewNamesDrop');
 viewCellCount  =findobj('Tag','viewCellCount');
+viewBlindCheck  =findobj('Tag','viewBlindCheck');
 
+reBlind = false;
+%unblind if necessary
+if viewBlindCheck.Value
+    viewBlindCheck.Value = false;
+    viewEPSC_BlindFile(viewBlindCheck)
+    reBlind = true;
+end
 %Get all appdata except dataPath
 allAppdata = getappdata(viewEPSC);
 appNames = fieldnames(allAppdata);
@@ -4462,6 +4495,7 @@ elseif strcmp(hObject.Tag,'viewRemoveAll')
         return
     end
     removeIdx(:) = true;
+    reBlind = false;
 end
 %Remove idx
 for i = 1:numel(appNames)
@@ -4501,6 +4535,11 @@ end
 %Update plot as new cell
 viewPlot.UserData = [];
 viewEPSC_Plot;
+
+if reBlind
+    viewBlindCheck.Value = true;
+    viewEPSC_BlindFile(viewBlindCheck)
+end
 end
 
 %Save and export GUIs
@@ -5090,6 +5129,15 @@ viewExportPathEdit = findobj('Tag','viewExportPathEdit');
 viewExportStatus = findobj('Tag','viewExportStatus');
 allChecks = findobj(viewExportGUI,'Style','checkbox');
 exportChecks = get(allChecks,'Value');
+viewBlindCheck  =findobj('Tag','viewBlindCheck');
+
+reBlind = false;
+%unblind if necessary
+if viewBlindCheck.Value
+    viewBlindCheck.Value = false;
+    viewEPSC_BlindFile(viewBlindCheck)
+    reBlind = true;
+end
 
 %Get and set path
 if strcmp(hObject.Tag,'viewExportPathSelect')
@@ -5486,12 +5534,85 @@ elseif strcmp(hObject.Tag,'viewExportExport')
     end
     viewExportStatus.String = 'Finished writing Excel sheet';
 end
+
+if reBlind
+    viewBlindCheck.Value = true;
+    viewEPSC_BlindFile(viewBlindCheck)
+end
 end
 
+%Blind cells
+function viewEPSC_BlindFile(hObject,event)
+viewEPSC = findobj('Tag', 'viewEPSC');
+viewNamesDrop = findobj('Tag','viewNamesDrop');
+dataFltr = getappdata(viewEPSC,'ephysFltr');
+ephysDB = getappdata(viewEPSC,'ephysDB');
 
+
+if hObject.Value
+    %Blind files
+    if isempty(hObject.UserData) ||...
+            numel(hObject.UserData{1}) ~= numel(viewNamesDrop.String)
+        %New blind or n files changed
+        blindOrder = randperm(numel(viewNamesDrop.String));
+        [~,unblindOrder] = sort(blindOrder);
+        hObject.UserData{1} = blindOrder;
+        hObject.UserData{2} = unblindOrder;
+    else
+        blindOrder = hObject.UserData{1};
+        unblindOrder = hObject.UserData{2};
+    end
+    hObject.UserData{3} = viewNamesDrop.String;
+    
+    baselineValues = getappdata(viewEPSC,'baselineValues');
+baselineValue = baselineValues{viewNamesDrop.Value};
+artifactSettings = getappdata(viewEPSC,'artifactSettings');
+artifactSetting = artifactSettings{viewNamesDrop.Value};
+amplitudeSettings = getappdata(viewEPSC,'amplitudeSettings');
+amplitudeSetting = amplitudeSettings{viewNamesDrop.Value};
+chargeSettings = getappdata(viewEPSC,'chargeSettings');
+chargeSetting = chargeSettings{viewNamesDrop.Value};
+miniSettings = getappdata(viewEPSC,'miniSettings');
+miniSetting = miniSettings{viewNamesDrop.Value};
+
+    %Sort data
+    dataObj = {'ephysFltr','ephysDB','baselineValues','artifactSettings',...
+        'amplitudeSettings','amplitudeSettings','chargeSettings','miniSettings',...
+        'miniCoords','miniFeatures','miniTargets'};
+    for ii = 1:numel(dataObj)
+        sortObj = getappdata(viewEPSC,dataObj{ii});
+        sortObj = sortObj(blindOrder,:);
+        setappdata(viewEPSC,dataObj{ii},sortObj);
+    end
+    viewNamesDrop.String = cellfun(@num2str,...
+        num2cell(1:numel(viewNamesDrop.String)),'UniformOutput',false);
+    viewNamesDrop.Value = unblindOrder(viewNamesDrop.Value);
+    
+else
+    %unblind files
+    blindOrder = hObject.UserData{1};
+    unblindOrder = hObject.UserData{2};
+    
+    %Sort data
+    dataObj = {'ephysFltr','ephysDB','baselineValues','artifactSettings',...
+        'amplitudeSettings','amplitudeSettings','chargeSettings','miniSettings',...
+        'miniCoords','miniFeatures','miniTargets'};
+    for ii = 1:numel(dataObj)
+        sortObj = getappdata(viewEPSC,dataObj{ii});
+        sortObj = sortObj(unblindOrder,:);
+        setappdata(viewEPSC,dataObj{ii},sortObj);
+    end
+    
+    viewNamesDrop.String = hObject.UserData{3};
+    viewNamesDrop.Value = blindOrder(viewNamesDrop.Value);
+end
+if nargin == 2
+    viewEPSC_Plot;
+end
+end
 
 function viewCloseRequest(hObject,event)
-yes = questdlg('Quit viewEPSC?');
+yes = questdlg('Quit viewEPSC? Did you save everything?');
 if strcmp(yes,'Yes')
     %Close all subsidiary windows first
     window = {};
