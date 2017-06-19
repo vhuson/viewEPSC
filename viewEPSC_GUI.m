@@ -389,7 +389,7 @@ if ~oldCell || strcmp(hObject.Tag,'viewArtifactsCheck')
             end
         end
         
-        %Clear tempSettings        
+        %Clear tempSettings
         viewArtifactsCheck.UserData = [];
         viewChargeCheck.UserData = [];
         viewAmplitudeCheck.UserData = [];
@@ -720,6 +720,12 @@ if viewLoadDrop.Value ~= 2 %Maybe old settings exist in which case load them
     miniTargets(targets(:,8)) = oldValues(targets(:,8),8);
 end
 
+targetCorr = find(targets(:,6) ~= targets(:,8) & targets(:,6));
+for ii = targetCorr
+    %No saved targets every coordinate is real mini
+    miniTargets{ii} = [true(size(miniCoords{ii},1),1),...
+        false(size(miniCoords{ii},1),1)];
+end
 %Set variables again
 setappdata(viewEPSC,'ephysFltr',ephysFltr);
 setappdata(viewEPSC,'ephysDB',ephysDB);
@@ -3636,12 +3642,12 @@ switch hObject.Tag
         end
         markFeature(markCurrIdx,9) = true;
         
-%         for i=1:numel(rangeEvents)
-%             if doubleEvents(i)
-%                 markFeature(rangeEvents(i),9) = true;
-%             end
-%         end
-%         
+        %         for i=1:numel(rangeEvents)
+        %             if doubleEvents(i)
+        %                 markFeature(rangeEvents(i),9) = true;
+        %             end
+        %         end
+        %
         %Calculate parameters
         for i=[doubleIdx,markCurrIdx]
             bDouble=markFeature(i,9);
@@ -3680,33 +3686,33 @@ switch hObject.Tag
         miniCoord(miniTarget(:,1),:) = markCoord;
         miniFeature(miniTarget(:,1),:) = markFeature;
         
-%         bDouble= any(doubleEvents);
-%         
-%         pre = max([1, currCoord(1,1)-0.03/fileSI+1]);
-%         post = min([numel(fileData), pre-1+0.07/fileSI]);
-%         
-%         if markCurrIdx+1 > size(markCoord,1)
-%             distance = diff([currCoord(1,1),xStop/fileSI]);
-%             preDistance = diff([markCoord(rangeEvents(1),1),currCoord(1,1)]);
-%         elseif markCurrIdx==1
-%             distance = diff([currCoord(1,1),markCoord(rangeEvents(end),1)]);
-%             preDistance = diff([xStart/fileSI,currCoord(1,1)]);
-%         else
-%             distance = diff([currCoord(1,1),markCoord(rangeEvents(end),1)]);
-%             preDistance = diff([markCoord(rangeEvents(1),1),currCoord(1,1)]);
-%         end
-%         %Features
-%         %1:Amplitude; 2:rise time, 3:baseline, 4:decayTau, 5:50%X, 6:50%Y, 
-%         %7:fit area, 8:sum Area, 9:double?
-%         [newCoord, newFeature] = ...
-%             viewGetMiniParameters(fileData(pre:post),fileSI,bDouble,...
-%             distance,preDistance);
-%         %Set new coordinates
-%         miniCoord(miniCurrIdx,1) = miniCoord(miniCurrIdx,1)+newCoord(1,1);
-%         miniCoord(miniCurrIdx,2) = newCoord(1,2);
-%         
-%         %set features
-%         miniFeature(miniCurrIdx,:) = newFeature;
+        %         bDouble= any(doubleEvents);
+        %
+        %         pre = max([1, currCoord(1,1)-0.03/fileSI+1]);
+        %         post = min([numel(fileData), pre-1+0.07/fileSI]);
+        %
+        %         if markCurrIdx+1 > size(markCoord,1)
+        %             distance = diff([currCoord(1,1),xStop/fileSI]);
+        %             preDistance = diff([markCoord(rangeEvents(1),1),currCoord(1,1)]);
+        %         elseif markCurrIdx==1
+        %             distance = diff([currCoord(1,1),markCoord(rangeEvents(end),1)]);
+        %             preDistance = diff([xStart/fileSI,currCoord(1,1)]);
+        %         else
+        %             distance = diff([currCoord(1,1),markCoord(rangeEvents(end),1)]);
+        %             preDistance = diff([markCoord(rangeEvents(1),1),currCoord(1,1)]);
+        %         end
+        %         %Features
+        %         %1:Amplitude; 2:rise time, 3:baseline, 4:decayTau, 5:50%X, 6:50%Y,
+        %         %7:fit area, 8:sum Area, 9:double?
+        %         [newCoord, newFeature] = ...
+        %             viewGetMiniParameters(fileData(pre:post),fileSI,bDouble,...
+        %             distance,preDistance);
+        %         %Set new coordinates
+        %         miniCoord(miniCurrIdx,1) = miniCoord(miniCurrIdx,1)+newCoord(1,1);
+        %         miniCoord(miniCurrIdx,2) = newCoord(1,2);
+        %
+        %         %set features
+        %         miniFeature(miniCurrIdx,:) = newFeature;
         
         %Advance position unless its the last one
         miniCurrIdx = min([miniCurrIdx+1,numel(viewANNEventDrop.String)]);
@@ -3735,7 +3741,7 @@ switch hObject.Tag
                 %correct for wrong number of double events
                 if numel(doubleEvents) < numel(rangeEvents)+1
                     if rangeEvents(1) == 1
-                       doubleEvents = [false; doubleEvents];
+                        doubleEvents = [false; doubleEvents];
                     else
                         doubleEvents = [doubleEvents; false];
                     end
@@ -3929,7 +3935,7 @@ if freshDetect
         post = round(min([numel(fileData), pre-1+0.07/fileSI]));
         
         %Features
-        %1:Amplitude; 2:rise time, 3:baseline, 4:decayTau, 5:50%X, 6:50%Y, 
+        %1:Amplitude; 2:rise time, 3:baseline, 4:decayTau, 5:50%X, 6:50%Y,
         %7:fit area, 8:sum Area, 9:double?
         [newCoord, newFeature] = ...
             viewGetMiniParameters(fileData(pre:post),fileSI,bDouble,...
@@ -4225,8 +4231,8 @@ if closeWindow
     end
     
     %replot (This messes up the current temporary miniSettings)
-%     viewPlot.UserData = [];
-%     viewEPSC_Plot;
+    %     viewPlot.UserData = [];
+    %     viewEPSC_Plot;
     
     %Re-enable functionality
     window = sort(findobj('-regexp','Tag','view[^(ANN)]','Type','Figure'));
@@ -4663,10 +4669,13 @@ elseif strcmp(hObject.Tag,'viewSaveSave')
         if si>1; si = si*1e-6; end;
         
         if singleFile
+            allFields = fieldnames(dataFile);
             dataStruct(i).filename = saveFltr{i,1};
             dataStruct(i).data = dataTrace;
             dataStruct(i).si = dataFile.si;
-            dataStruct(i).header = dataFile.header;
+            if any(strcmp(allFields,'header'))
+                dataStruct(i).header = dataFile.header;
+            end
         else %See if we need to copy any files
             if ~isempty(regexp(viewSavePathEdit.String(end),'/|\','ONCE'))
                 savePath = viewSavePathEdit.String(1:end-1);
@@ -4714,7 +4723,7 @@ elseif strcmp(hObject.Tag,'viewSaveSave')
         end
         
         %Check if we have to save Targets
-         if saveChecks{18} %Mini Targets
+        if saveChecks{18} %Mini Targets
             if ~isempty(miniSettings{i})
                 %Are we saving all or just marked
                 if saveChecks{16}
@@ -5565,16 +5574,16 @@ if hObject.Value
     hObject.UserData{3} = viewNamesDrop.String;
     
     baselineValues = getappdata(viewEPSC,'baselineValues');
-baselineValue = baselineValues{viewNamesDrop.Value};
-artifactSettings = getappdata(viewEPSC,'artifactSettings');
-artifactSetting = artifactSettings{viewNamesDrop.Value};
-amplitudeSettings = getappdata(viewEPSC,'amplitudeSettings');
-amplitudeSetting = amplitudeSettings{viewNamesDrop.Value};
-chargeSettings = getappdata(viewEPSC,'chargeSettings');
-chargeSetting = chargeSettings{viewNamesDrop.Value};
-miniSettings = getappdata(viewEPSC,'miniSettings');
-miniSetting = miniSettings{viewNamesDrop.Value};
-
+    baselineValue = baselineValues{viewNamesDrop.Value};
+    artifactSettings = getappdata(viewEPSC,'artifactSettings');
+    artifactSetting = artifactSettings{viewNamesDrop.Value};
+    amplitudeSettings = getappdata(viewEPSC,'amplitudeSettings');
+    amplitudeSetting = amplitudeSettings{viewNamesDrop.Value};
+    chargeSettings = getappdata(viewEPSC,'chargeSettings');
+    chargeSetting = chargeSettings{viewNamesDrop.Value};
+    miniSettings = getappdata(viewEPSC,'miniSettings');
+    miniSetting = miniSettings{viewNamesDrop.Value};
+    
     %Sort data
     dataObj = {'ephysFltr','ephysDB','baselineValues','artifactSettings',...
         'amplitudeSettings','amplitudeSettings','chargeSettings','miniSettings',...
