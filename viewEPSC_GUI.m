@@ -3521,7 +3521,7 @@ if fileSI>1; fileSI = fileSI/1e6; end;
 fileData = fileData{1}(:,1);
 
 %Fix partial saved parameters
-if all(miniTarget(:,1))
+if ~isempty(miniTarget) && all(miniTarget(:,1))
     ampThres = sscanf(viewANNDetectEdit.String,'%g');
     %detect peaks
     [roughX,roughY,roughFeatures] = roughMiniDetect(...
