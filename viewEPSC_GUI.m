@@ -721,11 +721,14 @@ if viewLoadDrop.Value ~= 2 %Maybe old settings exist in which case load them
 end
 
 targetCorr = find(targets(:,6) ~= targets(:,8) & targets(:,6));
+brokenCorr = find(cellfun(@(x,y) numel(x)~=numel(y),miniCoords,miniTargets));
+targetCorr = unique([targetCorr;brokenCorr]);
 if ~isempty(targetCorr)
-    for ii = targetCorr
+    for ii = 1:numel(targetCorr)
         %No saved targets every coordinate is real mini
-        miniTargets{ii} = [true(size(miniCoords{ii},1),1),...
-            false(size(miniCoords{ii},1),1)];
+        jj=targetCorr(ii);
+        miniTargets{jj} = [true(size(miniCoords{jj},1),1),...
+            false(size([miniCoords{jj}],1),1)];
     end
 end
 %Set variables again
@@ -3484,6 +3487,9 @@ else
     miniFeature = viewANNGUI.UserData{3};
 end
 
+
+
+
 %Current position
 [miniCurrIdx,~,~,next] = sscanf(viewANNEventDrop.String{viewANNEventDrop.Value},'%g');
 miniCurrX = sscanf(viewANNEventDrop.String{viewANNEventDrop.Value}(next+1:end),'%g');
@@ -3514,7 +3520,48 @@ fileSI = fileData{2};
 if fileSI>1; fileSI = fileSI/1e6; end;
 fileData = fileData{1}(:,1);
 
+%Fix partial saved parameters
+if all(miniTarget(:,1))
+    ampThres = sscanf(viewANNDetectEdit.String,'%g');
+    %detect peaks
+    [roughX,roughY,roughFeatures] = roughMiniDetect(...
+        fileData(round(xStart/fileSI):round(xStop/fileSI)),ampThres);
+    %Resize features
+    roughLarge = NaN(size(roughFeatures,1),10);
+    roughLarge(:,1:size(roughFeatures,2)) = roughFeatures;
+    
+    %Generate Targets
+    roughCoords = [roughX,roughY];
+    roughTargets = false(size(roughCoords));
+    roughTargets(:,2) = true;
+    
+    %Remove potential double coords
+    maxD = round(0.002/fileSI);
+    for ii = 1:size(miniCoord,1)
+        selVec = ~(roughCoords(:,1)>miniCoord(ii,1)-maxD &...
+            roughCoords(:,1)<miniCoord(ii,1)+maxD);
+        
+        roughCoords = roughCoords(selVec,:);
+        roughTargets = roughTargets(selVec,:);
+        roughLarge = roughLarge(selVec,:);
+    end
+    
+    %Combine
+    miniCoord = [roughCoords;miniCoord];
+    miniTarget = [roughTargets;miniTarget];
+    miniFeature = [roughLarge;miniFeature];
+    %Sort
+    [~,sortVec] = sort(miniCoord(:,1));
+    miniCoord = miniCoord(sortVec,:);
+    miniTarget = miniTarget(sortVec,:);
+    miniFeature = miniFeature(sortVec,:);
+    
+%     %Save
+%     viewMiniDoneCheck.UserData{1} = miniCoord;
+%     viewMiniDoneCheck.UserData{3} = miniFeature;
+%     viewMiniDoneCheck.UserData{2} = miniTarget;
 
+end
 
 %Update booleans
 updateScat = false;
