@@ -4292,7 +4292,10 @@ if closeWindow
             set(UIObjects(j),'Enable',enableSettings{i}{j});
         end
     end
-    
+    %Auto apply on finish
+    if strcmp(hObject.Tag,'viewANNFinish')
+        viewMini_Update(findobj('Tag','viewMiniApply'),[]);
+    end
     %Delete figure and finish
     delete(viewANNGUI);
     return
