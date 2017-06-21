@@ -3570,6 +3570,7 @@ eventDropUpdate = false;
 updateLims = false;
 previewDetect = false;
 closeWindow = false;
+updateRatio = false;
 
 switch hObject.Tag
     case 'viewANNStatus'
@@ -3767,6 +3768,8 @@ switch hObject.Tag
         miniCurrIdx = min([miniCurrIdx+1,numel(viewANNEventDrop.String)]);
         viewANNEventDrop.Value = miniCurrIdx;
         
+        viewANNCertEdit.UserData = viewANNCertEdit.UserData-1;
+        updateRatio= true;
         updateScat = true;
     case 'viewANNDiscard'
         miniTarget(miniCurrIdx,:) = [0 1];
@@ -3856,6 +3859,8 @@ switch hObject.Tag
         miniCurrIdx = min([miniCurrIdx+1,numel(viewANNEventDrop.String)]);
         viewANNEventDrop.Value = miniCurrIdx;
         
+        viewANNCertEdit.UserData = viewANNCertEdit.UserData+1;
+        updateRatio= true;
         updateScat = true;
     case 'viewANNCertEdit'
         %Check if we need to preview
@@ -4049,6 +4054,8 @@ if freshDetect
     %Update drop
     if ~previewDetect
         eventDropUpdate = true;
+        viewANNCertEdit.UserData = 0;
+        updateRatio = true;
     end
     
     %Update status
@@ -4105,9 +4112,13 @@ if updateLims
             if strcmp(event,'next')
                 x1 = viewPlot.XLim(1)+xLength*0.7;
                 x2 = viewPlot.XLim(2)+xLength*0.7;
+                %Decay manual ratio
+                viewANNCertEdit.UserData = viewANNCertEdit.UserData*0.8;
             elseif strcmp(event, 'prev')
                 x1 = viewPlot.XLim(1)-xLength*0.7;
                 x2 = viewPlot.XLim(2)-xLength*0.7;
+                %Undecay manual ratio
+                viewANNCertEdit.UserData = viewANNCertEdit.UserData/0.8;
             end
             %Change currIdx
             newIdx = find(miniCoord(:,1)>(x1+xLength*0.15)/fileSI);
@@ -4119,6 +4130,7 @@ if updateLims
                 miniX = miniCoord(miniCurrIdx,1);
             end
             viewANNEventDrop.Value = miniCurrIdx;
+            updateRatio = true;
         else
             %Set currIdx 20% from start
             x1 = miniX-xLength*0.15;
@@ -4246,7 +4258,11 @@ if updateScat
     hold(viewPlot, 'off')
     
 end
-
+%Display ratio
+if updateRatio
+   ratioNum = viewANNCertEdit.UserData/7;
+   viewANNStatus.String = ['Manual ratio: ',num2str(ratioNum)];
+end
 if closeWindow
     %Remove functions
     viewPlot.ButtonDownFcn = '';
