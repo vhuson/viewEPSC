@@ -18,9 +18,10 @@ end
 %Fit for baseline
 baseFit = fit((1:round(0.01/si))',miniTrace((round((0.02+si)/si):round(0.03/si))+realX),'poly6','Normalize','on');
 %plot(baseFit,(1:round(0.01/si))',miniTrace((round((0.02+si)/si):round(0.03/si))+realX));
+preBase = round(min([0.005/si,preDistance]));
 
 %Get baseline
-[baseY,baseX] = max(baseFit(round(0.01/si):-1:round(0.005/si)));
+[baseY,baseX] = max(baseFit(round(0.01/si):-1:round(0.01/si)-preBase));
 [~,adjBaseX] = min(abs(miniTrace(...
     (round(0.03/si):-1:round(0.03/si)-baseX)+realX)-baseY));
 %Make sure there was something to be found, otherwise ignore adjustment
