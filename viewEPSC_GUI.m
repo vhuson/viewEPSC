@@ -4260,7 +4260,7 @@ if updateScat
 end
 %Display ratio
 if updateRatio
-   ratioNum = viewANNCertEdit.UserData/7;
+   ratioNum = viewANNCertEdit.UserData/3;
    viewANNStatus.String = ['Manual ratio: ',num2str(ratioNum)];
 end
 if closeWindow
