@@ -3258,12 +3258,12 @@ switch hObject.Tag
         
         %Set initial values
         if dropN == 0
-            %No other sections, whole of the trace
-            miniTemp(1,1) = viewDataTrace.XData(1);
+            %No other sections, maximum analyzable portion
+            miniTemp(1,1) = 0.03;
         else %Start at the end of the other section
             miniTemp(dropN+1,1) = max(miniTemp(:,2));
         end
-        miniTemp(dropN+1,2) = viewDataTrace.XData(end);
+        miniTemp(dropN+1,2) = viewDataTrace.XData(end)-0.03;
         miniTemp(dropN+1,3) = false;
     case 'viewMiniSetRemove'
         %Remove section
@@ -3290,8 +3290,8 @@ switch hObject.Tag
         startNum = round(startNum,numel(num2str(1/viewDataTrace.XData(1)))-1);
         
         %make sure its valid
-        startNum = max([startNum,viewDataTrace.XData(1)]);
-        startNum = min([startNum,viewDataTrace.XData(end)]);
+        startNum = max([startNum,0.03]);
+        startNum = min([startNum,viewDataTrace.XData(end)-0.03]);
         
         if ismember(startNum,miniTemp(:,1))
             hObject.String = num2str(miniTemp(viewMiniSetDrop.Value,1));
@@ -3317,8 +3317,8 @@ switch hObject.Tag
         stopNum = round(stopNum,numel(num2str(1/viewDataTrace.XData(1)))-1);
         
         %make sure its valid
-        stopNum = max([stopNum,viewDataTrace.XData(1)]);
-        stopNum = min([stopNum,viewDataTrace.XData(end)]);
+        stopNum = max([stopNum,0.03]);
+        stopNum = min([stopNum,viewDataTrace.XData(end)-0.03]);
         
         %Check if we are making section larger
         if stopNum > miniTemp(viewMiniSetDrop.Value,2)
