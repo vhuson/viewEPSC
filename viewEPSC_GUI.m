@@ -3571,6 +3571,7 @@ updateLims = false;
 previewDetect = false;
 closeWindow = false;
 updateRatio = false;
+rollingDetection = true;
 
 switch hObject.Tag
     case 'viewANNStatus'
@@ -3974,10 +3975,20 @@ if freshDetect
     largeFeatures(:,1:size(feature,2)) = feature;
     
     %Correct parameters
-    markCoord = coord(target(:,1),:);
-    markFeature = largeFeatures(target(:,1),:);
-    markTarget = target;
-    coordDistance = diff([markCoord(:,1)*fileSI;xStop]);
+    tStrt = 1;
+    tWin = 100;
+    if rollingDetection
+        tEnd = find(cumsum(target(:,1)) <= tWin, 1,'last');
+    else
+        tEnd = size(target,1);
+    end
+    
+    loop = true;
+    while loop
+    markCoord = coord(target(tStrt:tEnd,1),:);
+    markFeature = largeFeatures(target(tStrt:tEnd,1),:);
+    markTarget = target(tStrt:tEnd);
+    coordDistance = diff([markCoord(tStrt:tEnd,1)*fileSI;xStop]);
     leadingDouble = false;
     
     for i=1:size(markCoord,1)
@@ -4010,10 +4021,18 @@ if freshDetect
             num2str(i),'/',num2str(size(markCoord,1)),')'];
     end
     
-    coord(target(:,1),:) = markCoord;
-    largeFeatures(target(:,1),:) = markFeature;
+    coord(target(tStrt:tEnd,1),:) = markCoord;
+    largeFeatures(target(tStrt:tEnd,1),:) = markFeature;
     feature = largeFeatures;
     target = markTarget;
+    
+    %Advance rolling
+    tStrt = tEnd+1;
+    tWin = tWin+100;
+    tEnd = find(cumsum(target(:,1)) <= tWin, 1,'last');
+    if tEnd >= size(target(:,1))
+        loop = false;
+    end
     %Make sure we don't have duplicates
     uniqueCoord = false(size(coord,1),1);
     [~,unqIdx] = unique(coord(:,1));
@@ -4057,7 +4076,10 @@ if freshDetect
         viewANNCertEdit.UserData = 0;
         updateRatio = true;
     end
-    
+    if loop
+        viewANNStatus.String = 'Analyzing next window';
+    end
+    end
     %Update status
     viewANNStatus.String = 'Detection finished';
     
