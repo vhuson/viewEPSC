@@ -718,19 +718,21 @@ if viewLoadDrop.Value ~= 2 %Maybe old settings exist in which case load them
     miniCoords(targets(:,6)) = oldValues(targets(:,6),6);
     miniFeatures(targets(:,7)) = oldValues(targets(:,7),7);
     miniTargets(targets(:,8)) = oldValues(targets(:,8),8);
-end
-
-targetCorr = find(targets(:,6) ~= targets(:,8) & targets(:,6));
-brokenCorr = find(cellfun(@(x,y) numel(x)~=numel(y),miniCoords,miniTargets));
-targetCorr = unique([targetCorr;brokenCorr]);
-if ~isempty(targetCorr)
-    for ii = 1:numel(targetCorr)
-        %No saved targets every coordinate is real mini
-        jj=targetCorr(ii);
-        miniTargets{jj} = [true(size(miniCoords{jj},1),1),...
-            false(size([miniCoords{jj}],1),1)];
+    
+    targetCorr = find(targets(:,6) ~= targets(:,8) & targets(:,6));
+    brokenCorr = find(cellfun(@(x,y) numel(x)~=numel(y),miniCoords,miniTargets));
+    targetCorr = unique([targetCorr;brokenCorr]);
+    if ~isempty(targetCorr)
+        for ii = 1:numel(targetCorr)
+            %No saved targets every coordinate is real mini
+            jj=targetCorr(ii);
+            miniTargets{jj} = [true(size(miniCoords{jj},1),1),...
+                false(size([miniCoords{jj}],1),1)];
+        end
     end
 end
+
+
 %Set variables again
 setappdata(viewEPSC,'ephysFltr',ephysFltr);
 setappdata(viewEPSC,'ephysDB',ephysDB);
