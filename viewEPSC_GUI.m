@@ -43,7 +43,14 @@ viewToolbar = findall(viewEPSC,'Type','uitoolbar');
 pushTools = findall(viewEPSC,'Type','uipushtool');
 toggleTools = findall(viewEPSC,'Type','uitoggletool');
 brushTool = findall(viewEPSC,'Tag','Exploration.Brushing');
-delete(pushTools); delete(brushTool);
+%Reshape into copy tool
+copyTool = pushTools(1);
+copyTool.CData = toggleTools(3).CData;
+copyTool.Tag = 'viewCopyTool';
+copyTool.TooltipString = 'Copy current view to separate figure';
+copyTool.ClickedCallback = @viewCopyFigure;
+
+delete(pushTools([2:end])); delete(brushTool);
 delete(toggleTools([1:3,5]));
 
 %% Set up appdata variables
@@ -5671,6 +5678,23 @@ else
 end
 if nargin == 2
     viewEPSC_Plot;
+end
+end
+
+%Copy current axes
+function viewCopyFigure(hObject,event)
+%% Copy view EPSC image
+viewAxes = findobj('Tag','viewPlot');
+copyFig = figure;
+copyAxes = copyobj(viewAxes,copyFig);
+copyAxes.Tag = 'copyPlot';
+copyAxes.ButtonDownFcn = '';
+copyAxes.CreateFcn = '';
+copyAxes.DeleteFcn = '';
+copyAxes.UserData = [];
+
+for ii = 1:numel(copyAxes.Children)
+    copyAxes.Children(ii).Tag = [copyAxes.Children(ii).Tag,'Copy'];
 end
 end
 
