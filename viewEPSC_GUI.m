@@ -3776,6 +3776,7 @@ switch hObject.Tag
         miniCurrIdx = min([miniCurrIdx+1,numel(viewANNEventDrop.String)]);
         viewANNEventDrop.Value = miniCurrIdx;
         
+        
         updateScat = true;
     case 'viewANNDiscard'
         miniTarget(miniCurrIdx,:) = [0 1];
@@ -5597,11 +5598,26 @@ elseif strcmp(hObject.Tag,'viewExportExport')
     end
     
     %% Export Excel
+    failedWrite = false;
     for sheet = 1:numel(excelData)
         viewExportStatus.String = ['Writing sheet: ',num2str(sheet)]; drawnow;
-        
-        xlswrite(viewExportPathEdit.String,excelData{sheet},excelSheet{sheet});
+        try
+            xlswrite(viewExportPathEdit.String,excelData{sheet},excelSheet{sheet});
+        catch %Didnt work just do the numbers I guess
+            failedWrite = true;
+            
+            numFltr = cellfun(@isnumeric,excelData{sheet});
+            numSheet = cell(size(excelData{sheet}));
+            for col = 1:size(excelData{sheet},2)
+                numSheet(numFltr(:,col),col) = excelData{sheet}(numFltr(:,col),col);
+            end
+            [path,name,ext]=fileparts(viewExportPathEdit.String);
+            addition = matlab.lang.makeValidName(excelSheet{sheet});
+            pathName = fullfile(path,[name,'_',addition,ext]);
+            xlswrite(pathName,numSheet,excelSheet{sheet});
+        end
     end
+    
     viewExportStatus.String = 'Finished writing Excel sheet';
 end
 
