@@ -5701,6 +5701,7 @@ end
 function viewCopyFigure(hObject,event)
 %% Copy view EPSC image
 viewAxes = findobj('Tag','viewPlot');
+viewNamesDrop = findobj('Tag','viewNamesDrop');
 copyFig = figure;
 copyAxes = copyobj(viewAxes,copyFig);
 copyAxes.Tag = 'copyPlot';
@@ -5708,6 +5709,7 @@ copyAxes.ButtonDownFcn = '';
 copyAxes.CreateFcn = '';
 copyAxes.DeleteFcn = '';
 copyAxes.UserData = [];
+copyAxes.Title.String = viewNamesDrop.String{viewNamesDrop.Value};
 
 for ii = 1:numel(copyAxes.Children)
     copyAxes.Children(ii).Tag = [copyAxes.Children(ii).Tag,'Copy'];
