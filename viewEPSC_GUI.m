@@ -3729,12 +3729,23 @@ switch hObject.Tag
                 preDistance = diff(markCoord(i-1:i,1));
             end
             
+            %Do we need to inhibit some calculation?
+            if ~isempty(miniManual)
+                manPars = miniManual(miniManual(:,1)==markCoord(i,1),:);
+                if ~isempty(manPars) && manPars(2)==1
+                    manPars = [manPars(2), markFeature(i,2)];
+                elseif ~isempty(manPars)
+                    manPars = manPars(2);
+                end
+            else
+                manPars = [];
+            end
             %Features
             %1:Amplitude; 2:rise time, 3:baseline, 4:decayTau, 5:50%X, 6:50%Y,
             %7:fit area, 8:sum Area, 9:double?
             [newCoord, newFeature] = ...
                 viewGetMiniParameters(fileData(pre:post),fileSI,bDouble,...
-                distance,preDistance);
+                distance,preDistance,manPars);
             
             %Set new coordinates
             markCoord(i,1) = markCoord(i,1)+newCoord(1,1);
@@ -3846,12 +3857,23 @@ switch hObject.Tag
                         preDistance = diff(markCoord(i-1:i,1));
                     end
                     
+                    %Do we need to inhibit some calculation?
+                    if ~isempty(miniManual)
+                        manPars = miniManual(miniManual(:,1)==markCoord(i,1),:);
+                        if ~isempty(manPars) && manPars(2)==1
+                            manPars = [manPars(2), markFeature(i,2)];
+                        elseif ~isempty(manPars)
+                            manPars = manPars(2);
+                        end
+                    else
+                        manPars = [];
+                    end
                     %Features
                     %1:Amplitude; 2:rise time, 3:baseline, 4:decayTau, 5:50%X, 6:50%Y,
                     %7:fit area, 8:sum Area, 9:double?
                     [newCoord, newFeature] = ...
                         viewGetMiniParameters(fileData(pre:post),fileSI,bDouble,...
-                        distance,preDistance);
+                        distance,preDistance,manPars);
                     
                     %Set new coordinates
                     markCoord(i,1) = markCoord(i,1)+newCoord(1,1);
@@ -4398,6 +4420,40 @@ switch keyPressed
         viewANN_Update(findobj('Tag','viewANNConfirm'))
     case 'c'
         viewANN_Update(findobj('Tag','viewANNDiscard'))
+    case 'b' %Adjust baseline
+        viewANNPreviewCheck = findobj('Tag','viewANNPreviewCheck');
+        if viewANNPreviewCheck.Value
+            %preview dont do anything
+            return;
+        end
+        viewANNGUI = findobj('Tag','viewANNGUI');
+        viewANNEventDrop = findobj('Tag','viewANNEventDrop');
+        viewPlot = findobj('Tag','viewPlot');
+        viewDataTrace = findobj('Tag','viewDataTrace');
+        fileSI = viewDataTrace.XData(1);
+        
+        currIdx = viewANNEventDrop.Value;
+        
+        miniCoord = viewANNGUI.UserData{1};
+        miniTarget = viewANNGUI.UserData{2};
+        miniFeature = viewANNGUI.UserData{3};        
+        miniManual = viewANNGUI.UserData{4};
+        
+        if miniTarget(currIdx,1) %only continue if event is marked
+            %Take control of axes   @viewANN_pressKey
+            hObject.WindowKeyPressFcn = @viewANN_baselineKey;
+            hObject.WindowScrollWheelFcn = '';
+            viewPlot.ButtonDownFcn = '';
+            
+            %Draw baseline
+            hold(viewPlot,'on')
+            baseX1 = miniCoord(currIdx,1)*fileSI-miniFeature(currIdx,2);
+            baseY1 = viewDataTrace.YData(round(baseX1/fileSI));
+            scatter(viewPlot,baseX1,baseY1,'>',...
+                'MarkerEdgeColor','none','MarkerFaceColor','r','HitTest','off',...
+                'Tag','viewMiniBaseRed')
+            hold(viewPlot,'off')
+        end        
     case 'rightarrow'
         viewANNPreviewCheck = findobj('Tag','viewANNPreviewCheck');
         if viewANNPreviewCheck.Value
@@ -4524,6 +4580,59 @@ switch keyPressed
     case 'pageup'
         viewANNEventDrop = findobj('Tag','viewANNEventDrop');
         viewANN_Update(viewANNEventDrop,'prev')
+end
+end
+
+function viewANN_baselineKey(hObject,event)
+%Move baseline around and store
+keyPressed = event.Key;
+viewCurrScat = findobj('Tag','viewMiniBaseRed');
+viewPlot = findobj('Tag','viewPlot');
+restoreAll = false;
+reCalc = false;
+
+if strcmp(keyPressed,'escape')
+    %Restore order
+    restoreAll = true;
+else
+    viewDataTrace = findobj('Tag','viewDataTrace');
+    fileSI = viewDataTrace.XData(1);
+    switch keyPressed
+        case 'rightarrow'
+            viewCurrScat.XData = viewCurrScat.XData+fileSI;
+            viewCurrScat.YData = viewDataTrace.YData(round(viewCurrScat.XData/fileSI));
+        case 'leftarrow'
+            viewCurrScat.XData = viewCurrScat.XData-fileSI;
+            viewCurrScat.YData = viewDataTrace.YData(round(viewCurrScat.XData/fileSI));
+        case 'return'
+            viewANNGUI = findobj('Tag','viewANNGUI');
+            viewANNEventDrop = findobj('Tag','viewANNEventDrop');
+            currIdx = viewANNEventDrop.Value;
+            
+            miniCoord = viewANNGUI.UserData{1};
+            miniFeature = viewANNGUI.UserData{3};
+            miniManual = viewANNGUI.UserData{4};
+            
+            miniFeature(currIdx,2) = miniCoord(currIdx,1)*fileSI...
+                -viewCurrScat.XData;
+            miniManual(end+1,:) = [miniCoord(currIdx,1),1];
+            
+            viewANNGUI.UserData{3} = miniFeature;
+            viewANNGUI.UserData{4} = miniManual;
+            
+            %Restore order
+            restoreAll = true;
+            reCalc = true;
+    end
+end
+if restoreAll
+    if ~isempty(viewCurrScat); delete(viewCurrScat);end
+    hObject.WindowKeyPressFcn = @viewANN_pressKey;
+    hObject.WindowScrollWheelFcn = @viewANN_pressKey;
+    viewPlot.ButtonDownFcn = @viewANN_click;
+end
+if reCalc
+    viewANN_Update(findobj('Tag','viewANNConfirm'))
 end
 end
 

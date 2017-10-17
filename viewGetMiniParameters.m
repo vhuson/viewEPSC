@@ -1,7 +1,10 @@
-function [ coords, features, gof ] = viewGetMiniParameters( miniTrace, si, bDouble,distance, preDistance )
+function [ coords, features, gof ] = viewGetMiniParameters( miniTrace, si, bDouble,distance, preDistance,manualParameters )
 %VIEWGETMINIPARAMETERS Calculate basic mini parameters through fitting
 %   Correct peak location, find baseline (Baseline location from relative
 %   to realX, find decay tau
+if ~exist('manualParameters','var') || isempty(manualParameters)
+    manualParameters = 0;
+end
 badFit = false;
 %Get true minimum
 peakOffset = round(min([0.002/si,distance/2,preDistance/2]));
@@ -25,23 +28,28 @@ if 600+realX > numel(miniTrace)
     distance = numel(miniTrace)-(300+realX);
 end
 
-%Fit for baseline
-baseFit = fit((1:round(0.01/si))',miniTrace((round((0.02+si)/si):round(0.03/si))+realX),'poly6','Normalize','on');
-%plot(baseFit,(1:round(0.01/si))',miniTrace((round((0.02+si)/si):round(0.03/si))+realX));
-preBase = round(min([0.005/si,preDistance]));
-
-%Get baseline
-[baseY,baseX] = max(baseFit(round(0.01/si):-1:round(0.01/si)-preBase));
-[~,adjBaseX] = min(abs(miniTrace(...
-    (round(0.03/si):-1:round(0.03/si)-baseX)+realX)-baseY));
-%Make sure there was something to be found, otherwise ignore adjustment
-if ~isempty(adjBaseX)
-    baseX = 1-adjBaseX;
+if manualParameters(1) == 1
+    baseX = round(-(manualParameters(2)/si+realX));
+    baseY = miniTrace(round(0.03/si+baseX));
 else
-    baseX = 1-baseX;
+    %Fit for baseline
+    baseFit = fit((1:round(0.01/si))',miniTrace((round((0.02+si)/si):round(0.03/si))+realX),'poly6','Normalize','on');
+    %plot(baseFit,(1:round(0.01/si))',miniTrace((round((0.02+si)/si):round(0.03/si))+realX));
+    preBase = round(min([0.005/si,preDistance]));
+    
+    %Get baseline
+    [baseY,baseX] = max(baseFit(round(0.01/si):-1:round(0.01/si)-preBase));
+    [~,adjBaseX] = min(abs(miniTrace(...
+        (round(0.03/si):-1:round(0.03/si)-baseX)+realX)-baseY));
+    
+    %Make sure there was something to be found, otherwise ignore adjustment
+    if ~isempty(adjBaseX)
+        baseX = 1-adjBaseX;
+    else
+        baseX = 1-baseX;
+    end
+    baseX = min([-1 baseX]);
 end
-baseX = min([-1 baseX]);
-
 %Fit for decay
 decayLen = round(min([0.03/si distance-realX-0.001/si]));
 if decayLen < 5 %Other event too close mark it
