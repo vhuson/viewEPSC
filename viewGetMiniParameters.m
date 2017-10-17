@@ -5,8 +5,18 @@ function [ coords, features, gof ] = viewGetMiniParameters( miniTrace, si, bDoub
 badFit = false;
 %Get true minimum
 peakOffset = round(min([0.002/si,distance/2,preDistance/2]));
-[realY,realX] = min(miniTrace(round(0.03/si)-peakOffset:...
-    round(0.03/si)+peakOffset));
+% [realY,realX] = min(miniTrace(round(0.03/si)-peakOffset:...
+%     round(0.03/si)+peakOffset));
+%EXPERIMENTAL, USE findpeaks to get best peak in area
+[y,x,pWidth,pAmp] = findpeaks(-miniTrace(round(0.03/si)-peakOffset:...
+    round(0.03/si)+peakOffset), 'MinPeakProminence',2,'SortStr','descend');
+if isempty(x) %No peaks fall back on original method
+    [realY,realX] = min(miniTrace(round(0.03/si)-peakOffset:...
+        round(0.03/si)+peakOffset));
+else %Good just get the max amplitude one
+    realX = x(1);
+    realY = -y(1);
+end
 realX = realX-1-peakOffset;
 % realX = 0;
 % realY = miniTrace(300);

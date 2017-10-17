@@ -3225,6 +3225,7 @@ miniCoord = miniCoords{viewNamesDrop.Value};
 miniTarget = miniTargets{viewNamesDrop.Value};
 miniFeature = miniFeatures{viewNamesDrop.Value};
 miniSetting   = miniSettings{viewNamesDrop.Value};
+miniManual = [];
 miniTemp = viewMiniAnalysisCheck.UserData;
 
 if size(miniTemp,2) == 0
@@ -3233,7 +3234,7 @@ end
 
 %Remove temp events when switching cells
 if isempty(viewMiniDoneCheck.UserData) || strcmp(hObject.Tag,'viewMiniStatus')
-    viewMiniDoneCheck.UserData = {miniCoord,miniTarget,miniFeature};
+    viewMiniDoneCheck.UserData = {miniCoord,miniTarget,miniFeature,miniManual};
     tempCoord = miniCoord;
     tempTarget = miniTarget;
     tempFeature = miniFeature;
@@ -3488,12 +3489,15 @@ miniSetting = viewMiniAnalysisCheck.UserData;
 
 if isempty(viewANNGUI.UserData)
     miniCoord = viewMiniDoneCheck.UserData{1};
+    
     miniTarget = viewMiniDoneCheck.UserData{2};
     miniFeature = viewMiniDoneCheck.UserData{3};
+    miniManual = viewMiniDoneCheck.UserData{4};
 else
     miniCoord = viewANNGUI.UserData{1};
     miniTarget = viewANNGUI.UserData{2};
     miniFeature = viewANNGUI.UserData{3};
+    miniManual = viewANNGUI.UserData{4};
 end
 
 
@@ -3659,7 +3663,7 @@ switch hObject.Tag
         
         if isempty(miniCoord) || xStart/fileSI > miniCoord(end,1)...
                 || xStop/fileSI < miniCoord(1,1)
-            freshDetect = true;
+            freshDetect = false;
         else
             eventDropUpdate = true;
         end
@@ -3931,6 +3935,7 @@ switch hObject.Tag
         viewMiniDoneCheck.UserData{1} = miniCoord;
         viewMiniDoneCheck.UserData{3} = miniFeature;
         viewMiniDoneCheck.UserData{2} = miniTarget;
+        viewMiniDoneCheck.UserData{4} = miniManual;
         
         %Set mini settings to analyzed
         viewMiniAnalysisCheck.UserData(viewMiniSetDrop.Value,3) = 1;
@@ -4120,15 +4125,17 @@ if updateLims
                 x2 = viewPlot.XLim(2)-xLength*0.7;
             end
             %Change currIdx
-            newIdx = find(miniCoord(:,1)>(x1+xLength*0.15)/fileSI);
-            if isempty(newIdx) %Nothing found just take last event
-                miniCurrIdx = numel(miniCoord(:,1));
-                miniX = miniCoord(miniCurrIdx,1);
-            else
-                miniCurrIdx = newIdx(1);
-                miniX = miniCoord(miniCurrIdx,1);
+            if ~isempty(miniCoord)
+                newIdx = find(miniCoord(:,1)>(x1+xLength*0.15)/fileSI);
+                if isempty(newIdx) %Nothing found just take last event
+                    miniCurrIdx = numel(miniCoord(:,1));
+                    miniX = miniCoord(miniCurrIdx,1);
+                else
+                    miniCurrIdx = newIdx(1);
+                    miniX = miniCoord(miniCurrIdx,1);
+                end
+                viewANNEventDrop.Value = miniCurrIdx;
             end
-            viewANNEventDrop.Value = miniCurrIdx;
         else
             %Set currIdx 20% from start
             x1 = miniX-xLength*0.15;
@@ -4190,7 +4197,7 @@ if updateLims
     end
 end
 
-if updateScat
+if updateScat && ~isempty(miniCoord)
     %Remove old versions if available
     viewMiniScat{1} = findobj('Tag','viewMiniScatRed');
     viewMiniScat{2} = findobj('Tag','viewMiniScatGreen');
@@ -4313,7 +4320,7 @@ end
 
 %Store events if not previewing
 if ~previewDetect
-    viewANNGUI.UserData = {miniCoord,miniTarget,miniFeature};
+    viewANNGUI.UserData = {miniCoord,miniTarget,miniFeature,miniManual};
 end
 end
 
@@ -4336,41 +4343,42 @@ miniCoord = viewANNGUI.UserData{1};
 miniTarget = viewANNGUI.UserData{2};
 miniFeature = viewANNGUI.UserData{3};
 
-%find closest peak
-[~, xClose] = min(abs(miniCoord(:,1)-xCorr/fileSI));
-
-%Set currIdx
-viewANNEventDrop.Value = xClose;
-
-%Plot CurrIdx point
-viewCurrScat = findobj('Tag','viewMiniScatYellow');
-if ~isempty(viewCurrScat); delete(viewCurrScat);end
-
-if xClose > 0
-    hold(viewPlot,'on')
-    scatter(viewPlot,miniCoord(xClose,1)*fileSI,miniCoord(xClose,2),...
-        'MarkerEdgeColor','none','MarkerFaceColor','y','HitTest','off',...
-        'Tag','viewMiniScatYellow')
+if ~isempty(miniCoord)
+    %find closest peak
+    [~, xClose] = min(abs(miniCoord(:,1)-xCorr/fileSI));
     
-    if miniTarget(xClose,1)
-        %Also fill baseline
-        baseX1 = miniCoord(xClose,1)*fileSI-miniFeature(xClose,2);
-        baseY1 = miniFeature(xClose,3);
-        scatter(viewPlot,baseX1,baseY1,'>',...
+    %Set currIdx
+    viewANNEventDrop.Value = xClose;
+    
+    %Plot CurrIdx point
+    viewCurrScat = findobj('Tag','viewMiniScatYellow');
+    if ~isempty(viewCurrScat); delete(viewCurrScat);end
+    
+    if xClose > 0
+        hold(viewPlot,'on')
+        scatter(viewPlot,miniCoord(xClose,1)*fileSI,miniCoord(xClose,2),...
             'MarkerEdgeColor','none','MarkerFaceColor','y','HitTest','off',...
             'Tag','viewMiniScatYellow')
-        if ~miniFeature(xClose,10)
-            %Also fill decay
-            decayX = miniCoord(xClose,1)*fileSI+miniFeature(xClose,5);
-            decayY = miniFeature(xClose,6)+miniFeature(xClose,3);
-            scatter(viewPlot,decayX,decayY,'<',...
+        
+        if miniTarget(xClose,1)
+            %Also fill baseline
+            baseX1 = miniCoord(xClose,1)*fileSI-miniFeature(xClose,2);
+            baseY1 = miniFeature(xClose,3);
+            scatter(viewPlot,baseX1,baseY1,'>',...
                 'MarkerEdgeColor','none','MarkerFaceColor','y','HitTest','off',...
                 'Tag','viewMiniScatYellow')
+            if ~miniFeature(xClose,10)
+                %Also fill decay
+                decayX = miniCoord(xClose,1)*fileSI+miniFeature(xClose,5);
+                decayY = miniFeature(xClose,6)+miniFeature(xClose,3);
+                scatter(viewPlot,decayX,decayY,'<',...
+                    'MarkerEdgeColor','none','MarkerFaceColor','y','HitTest','off',...
+                    'Tag','viewMiniScatYellow')
+            end
         end
+        hold(viewPlot,'off')
     end
-    hold(viewPlot,'off')
 end
-
 end
 
 function viewANN_pressKey(hObject,event)
