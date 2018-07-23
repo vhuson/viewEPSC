@@ -2393,9 +2393,9 @@ elseif strcmp(hObject.Tag,'viewArtifactApply')
         if sum(isnan(artifactTemp{i})) == 0
             %Check if block is valid
             block = artifactTemp{i};
-            blockLength = block(1)+(1/block(3)*block(2));
+            blockLengthmin1 = block(1)+(1/block(3)*(block(2)-1));
             
-            if blockLength > max(dataTrace.XData)
+            if blockLengthmin1+0.05 > max(dataTrace.XData)
                 viewArtifactStatus.String = 'Warning! Specified block longer than trace. Settings not Applied';
                 viewArtifactStatus.ForegroundColor = [1 0 0];
                 return;
@@ -2497,6 +2497,7 @@ if removeArtifacts  %Make block artifacts red
         %Check if block is valid
         block = artifactTemp{viewArtifactsSetDrop.Value};
         blockLength = block(1)+(1/block(3)*block(2));
+        blockLengthmin1 = block(1)+(1/block(3)*(block(2)-1));
         
         dataTrace = findobj('Tag','viewDataTrace');
         filename = artFltr{viewNamesDrop.Value,1};
@@ -2506,13 +2507,24 @@ if removeArtifacts  %Make block artifacts red
         if blockLength > max(dataTrace.XData)
             viewArtifactStatus.String = 'Warning! Specified block longer than trace';
             viewArtifactStatus.ForegroundColor = [1 0 0];
+        end
+        
+        if blockLengthmin1+0.05 > max(dataTrace.XData)
+            %It really doesn't fit don't do anything else
+            viewArtifactStatus.String = 'Warning! Specified block longer than trace';
+            viewArtifactStatus.ForegroundColor = [1 0 0];
         elseif 1/block(3) < max(block(4:5))
             viewArtifactStatus.String = ['Warning! Artifact may not exceed pulse length. ',...
                 'Typical widths range from 0.005s to 0.01s'];
             viewArtifactStatus.ForegroundColor = [1 0 0];
         else %Block is valid set up for plot
-            viewArtifactStatus.String = 'Valid block specified. Make sure to check proper cuts!';
-            viewArtifactStatus.ForegroundColor = [0 0 0];
+            if blockLength > max(dataTrace.XData)
+                viewArtifactStatus.String = 'Warning! Specified block longer than trace';
+                viewArtifactStatus.ForegroundColor = [1 0 0];
+            else
+                viewArtifactStatus.String = 'Valid block specified. Make sure to check proper cuts!';
+                viewArtifactStatus.ForegroundColor = [0 0 0];
+            end
             
             %Get Start stops
             artIdx = zeros(block(2),2);
@@ -3009,7 +3021,36 @@ else
         %         startButtons = findobj(viewChargeResponseStarts);
         %         viewChargeResponseStarts.SelectedObject =...
         %             startButtons(4-chargeTemp(1,blck)+1);
-        
+        blockWidth = artifactSetting{blck}(1)+(1/artifactSetting{blck}(3)...
+            *artifactSetting{blck}(2));
+        if chargeTemp(2,blck) ~= 3 && blockWidth > max(dataTrace.XData)
+            %Check if last pulse is within block
+            blockWidthmin1 = artifactSetting{blck}(1)+(1/artifactSetting{blck}(3)...
+                *(artifactSetting{blck}(2)-1));
+            if blockWidthmin1+0.05 > max(dataTrace.XData)
+                %Update status
+                viewChargeStatus.String = 'Warning! some pulses are outside trace, redefine artifacts';
+                viewChargeStatus.ForegroundColor = [1 0 0];
+                return
+            end
+            %Get data and si
+            fileData = retrieveEphys(filename,'data',dataPath); fileData = fileData{1}(:,1);
+            %Get Artifacts
+            [strt,stop] = viewGetArtifacts(fileData,dataTrace.XData(1),artifactSetting{blck});
+            arts = [strt,stop];
+            
+            %Get response starts at distance of minArt from art start
+            minArt = round(min(diff(arts'))+1)*dataTrace.XData(1);
+            %Get Maximum pulse size
+            pulseMax = max(dataTrace.XData)-(blockWidthmin1+minArt);
+            
+            %Remove any fixed values and set pulseMax as custom size
+            chargeTemp(2,chargeTemp(2,:) == 2) = 1;
+            chargeTemp(2,blck) = 3+pulseMax;
+            %Update status
+            viewChargeStatus.String = 'Warning! Last Pulse exceeds trace, custom width forced. Fixed not possible';
+            viewChargeStatus.ForegroundColor = [1 0 0];
+        end
         
         viewChargePulseWidth = findobj('Tag','viewChargePulseWidth');
         widthButtons = findobj(viewChargePulseWidth);
@@ -5423,7 +5464,7 @@ elseif strcmp(hObject.Tag,'viewExportExport')
         for p = 1:pulseMax(blck)
             pText(idx+p-1) = {[bText,'p',num2str(p)]};
         end
-        idx = idx+sum(pulseMax(1:blck))+2*blck;
+        idx = idx+pulseMax(blck)+2;
     end
     
     viewExportStatus.String = 'Retrieving data'; drawnow;
@@ -5510,7 +5551,7 @@ elseif strcmp(hObject.Tag,'viewExportExport')
                 %Get data and si
                 fileData = retrieveEphys(filename,'data',cellPath); fileData = fileData{1}(:,1);
                 fileSI = retrieveEphys(filename,'si',cellPath); fileSI = fileSI{1};
-                if fileSI > 1; fileSI = fileSI{1}*1e-6; end;
+                if fileSI > 1; fileSI = fileSI*1e-6; end;
                 cellBaseline = viewCalculateBaseline(...
                     baselineValues{c},fileData,fileSI);
                 

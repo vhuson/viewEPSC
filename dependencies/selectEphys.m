@@ -10,7 +10,7 @@ end
 
 if nargin < 2 || isempty(idx)
     %no idx search all
-    idx = 1:size(ephysMeta,2);
+    idx = 1:size(ephysFltr,2);
 end
 
 %put numeric arrays in cell
@@ -129,6 +129,16 @@ else
             numCompIdx = cellfun(numFunc,numCompData,'UniformOutput',0);
             numCompIdx = cell2mat(cellfun(@(x) any(x(:)),numCompIdx,...
                 'UniformOutput',0));
+            
+            %Also check first number found in char idxes
+            numConvFltr = cellfun(@(x) sscanf(x,'%g'),ephysFltr(:,idx(charIdx)),...
+                'UniformOutput',false);
+            numConvIdx = cellfun(numFunc,numConvFltr,'UniformOutput',0);
+            numConvIdx = cell2mat(cellfun(@(x) any(x(:)),numConvIdx,...
+                'UniformOutput',0));
+            
+            %Combine
+            numCompIdx = [numCompIdx,numConvIdx];
         end
         
         

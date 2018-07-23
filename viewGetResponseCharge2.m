@@ -100,6 +100,9 @@ for i = 1:numel(chargeSettings)
         
         if numel(respStarts) > 1
             maxStopX = ([respStarts(2:end); respStarts(end)+diff(respStarts(1:2))])-1;
+            if maxStopX(end) > size(corrTrace,1)-1
+                maxStopX(end) = size(corrTrace,1)-1;
+            end
         else
             maxStopX = pulseStopX;
         end

@@ -25,7 +25,7 @@ realX = realX-1-peakOffset;
 % realY = miniTrace(300);
 if 600+realX > numel(miniTrace)
     %window exceeds trace length make distance limiting step
-    distance = numel(miniTrace)-(300+realX);
+    distance = min([numel(miniTrace)-(300), distance]);
 end
 
 if manualParameters(1) == 1
@@ -50,7 +50,7 @@ else
     end
     baseX = min([-1 baseX]);
 end
-%Fit for decay
+%Fit for decay (distance minus an estimate of next rise time)
 decayLen = round(min([0.03/si distance-realX-0.001/si]));
 if decayLen < 5 %Other event too close mark it
     decayLen = round(distance);
@@ -69,7 +69,7 @@ normMini = (miniTrace((round(0.03/si):round(0.03/si+decayLen-1))+realX)-baseY)/(
 %     'StartPoint',[(realY-baseY),-250],'Lower',[(realY-baseY)*1.1, -1500],...
 %     'Upper',[(realY-baseY)*0.9, 0],'DiffMinChange',1e-4,...
 %     'DiffMaxChange',1,'MaxIter',30);
-%plot(decayFit,(0:si:(decayLen-1)*si)',normMini);
+% plot(decayFit,(0:si:(decayLen-1)*si)',normMini);
 
 %calculate area
 %Assume linear rise time from base to peak, and use decay fit for
