@@ -3023,7 +3023,7 @@ else
         %             startButtons(4-chargeTemp(1,blck)+1);
         blockWidth = artifactSetting{blck}(1)+(1/artifactSetting{blck}(3)...
             *artifactSetting{blck}(2));
-        if chargeTemp(2,blck) ~= 3 && blockWidth > max(dataTrace.XData)
+        if chargeTemp(2,blck) < 3 && blockWidth > max(dataTrace.XData)
             %Check if last pulse is within block
             blockWidthmin1 = artifactSetting{blck}(1)+(1/artifactSetting{blck}(3)...
                 *(artifactSetting{blck}(2)-1));
