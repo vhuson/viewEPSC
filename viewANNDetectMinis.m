@@ -54,7 +54,7 @@ miniTargets = N170303_unStrat(peakData);
 miniTargets(isnan(miniTargets)) = false;
 %miniTargets = logical(round(miniTargets));
 % targets=false(size(miniTargets' ));
-targets(~checkPeaks,2) = false;
+targets(~checkPeaks,2) = true;
 targets(checkPeaks,1) = miniTargets(1,:)>certThres;
 targets(checkPeaks,2) = miniTargets(2,:)>0.5;
 %remove double labeled
