@@ -14,7 +14,8 @@ f_y = polyval(p,(1:numel(data))',[],mu);
 data = data - f_y;
 
 %Filter data
- data = sgolayfilt(data, 3, 31);
+framelength = 21; %was 31
+ data = sgolayfilt(data, 3, framelength);
 %% find peaks
 [y,x,pWidth,pAmp] = findpeaks(data, 'MinPeakProminence',ampThres,...
     'MinPeakWidth',widthMin);

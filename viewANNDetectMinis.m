@@ -29,13 +29,20 @@ if stop > numel(data)
     stop = numel(data);
 end
 %detect peaks
-[x,y,features] = roughMiniDetect(data(start:stop),ampThres);
-
+if ampThres > 1
+    [x,y,features] = roughMiniDetect(data(start:stop),1);
+    checkPeaks = features(:,2) >= ampThres;
+    
+else
+    [x,y,features] = roughMiniDetect(data(start:stop),ampThres);
+    checkPeaks = true(size(x));
+end
 %Correct X for miniTrace position
 x = x + (start-1);
 
+targets=false(size(x,1),2);
 %Get Peak data
-peakData = viewGetMiniPeakData(data,x,si);
+peakData = viewGetMiniPeakData(data,x(checkPeaks),si);
 
 %Generate targets
 %Takes in sample rate reduced minis (window: 50ms 5kHz,250 samples);
@@ -46,9 +53,12 @@ miniTargets = N170303_unStrat(peakData);
 
 miniTargets(isnan(miniTargets)) = false;
 %miniTargets = logical(round(miniTargets));
-targets=false(size(miniTargets' ));
-targets(:,1) = miniTargets(1,:)>certThres;
-targets(~targets(:,1),2) = miniTargets(2,~targets(:,1))>0.5;
+% targets=false(size(miniTargets' ));
+targets(~checkPeaks,2) = false;
+targets(checkPeaks,1) = miniTargets(1,:)>certThres;
+targets(checkPeaks,2) = miniTargets(2,:)>0.5;
+%remove double labeled
+targets(targets(:,1),2) = false;
 %Set results
 coords = [x,y];
 
