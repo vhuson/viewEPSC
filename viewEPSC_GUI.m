@@ -3828,6 +3828,12 @@ switch hObject.Tag
         %         %set features
         %         miniFeature(miniCurrIdx,:) = newFeature;
         
+        %Sort
+        [~,miniIdx] = sort(miniCoord(:,1));
+        miniCoord = miniCoord(miniIdx,:);
+        miniFeature = miniFeature(miniIdx,:);
+        miniTarget = miniTarget(miniIdx,:);
+        
         %Advance position unless its the last one
         miniCurrIdx = min([miniCurrIdx+1,numel(viewANNEventDrop.String)]);
         viewANNEventDrop.Value = miniCurrIdx;
@@ -3929,6 +3935,13 @@ switch hObject.Tag
                 miniFeature(miniTarget(:,1),:) = markFeature;
             end
         end
+        
+        %Sort
+        [~,miniIdx] = sort(miniCoord(:,1));
+        miniCoord = miniCoord(miniIdx,:);
+        miniFeature = miniFeature(miniIdx,:);
+        miniTarget = miniTarget(miniIdx,:);
+        
         %Advance position unless its the last one
         miniCurrIdx = min([miniCurrIdx+1,numel(viewANNEventDrop.String)]);
         viewANNEventDrop.Value = miniCurrIdx;
