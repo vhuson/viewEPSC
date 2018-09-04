@@ -5109,6 +5109,7 @@ elseif strcmp(hObject.Tag,'viewSaveSave')
             if ~isempty(chargeSettings{i}) &&...
                     ~isempty(artifactSettings{i}) &&...
                     ~isempty(baselineValues{i})
+                %{
                 %We have values continue
                 artIdx = cell(size(artifactSettings{i}));
                 for v = 1:numel(artIdx)
@@ -5143,11 +5144,14 @@ elseif strcmp(hObject.Tag,'viewSaveSave')
                         chargeSettings{i}(1,v),pWidths(v),...
                         artIdx{v}, baseline, dataTrace, si);
                 end
+                %}
+                [pulseCharge2,~,~] = viewGetResponseCharge2(saveFltr{i,1},...
+                        chargeSettings{i}, artifactSettings{i}, baselineValues{i}, dataPath{ephysDB(i)});
                 
                 if ~singleFile
-                    dataFile.ChargeValue = pulseCharge;
+                    dataFile.ChargeValue = pulseCharge2{1};
                 else
-                    dataStruct(i).ChargeValue = pulseCharge;
+                    dataStruct(i).ChargeValue = pulseCharge2{1};
                 end
             else
                 unAnalyzed(end+1) = i;
@@ -5221,6 +5225,7 @@ elseif strcmp(hObject.Tag,'viewSaveSave')
             if ~isempty(chargeSettings{i}) &&...
                     ~isempty(artifactSettings{i}) &&...
                     ~isempty(baselineValues{i})
+                %{
                 %We have values continue
                 artIdx = cell(size(artifactSettings{i}));
                 for v = 1:numel(artIdx)
@@ -5257,10 +5262,15 @@ elseif strcmp(hObject.Tag,'viewSaveSave')
                     syncTrace(~isnan(tempTrace)) = tempTrace(~isnan(tempTrace));
                 end
                 
+                %}
+                [~,syncTrace2,~] = viewGetResponseCharge2(saveFltr{i,1},...
+                        chargeSettings{i}, artifactSettings{i}, baselineValues{i}, dataPath{ephysDB(i)});
+                
+                
                 if ~singleFile
-                    dataFile.SyncTrace = syncTrace;
+                    dataFile.SyncTrace = syncTrace2{1}{1};
                 else
-                    dataStruct(i).SyncTrace = syncTrace;
+                    dataStruct(i).SyncTrace = syncTrace2{1}{1};
                 end
             else
                 unAnalyzed(end+1) = i;
@@ -5286,6 +5296,7 @@ elseif strcmp(hObject.Tag,'viewSaveSave')
             if ~isempty(chargeSettings{i}) &&...
                     ~isempty(artifactSettings{i}) &&...
                     ~isempty(baselineValues{i})
+                %{
                 %We have values continue
                 artIdx = cell(size(artifactSettings{i}));
                 for v = 1:numel(artIdx)
@@ -5320,11 +5331,14 @@ elseif strcmp(hObject.Tag,'viewSaveSave')
                         chargeSettings{i}(1,v),pWidths(v),...
                         artIdx{v}, baseline, dataTrace, si);
                 end
+                %}
+                [~,~,syncIdx2] = viewGetResponseCharge2(saveFltr{i,1},...
+                        chargeSettings{i}, artifactSettings{i}, baselineValues{i}, dataPath{ephysDB(i)});
                 
                 if ~singleFile
-                    dataFile.ChargeIdx = syncIdx;
+                    dataFile.ChargeIdx = syncIdx2{1};
                 else
-                    dataStruct(i).ChargeIdx = syncIdx;
+                    dataStruct(i).ChargeIdx = syncIdx2{1};
                 end
             else
                 unAnalyzed(end+1) = i;
