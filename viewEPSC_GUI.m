@@ -37,148 +37,9 @@ viewEPSC = figure('OuterPosition', [100 100 1024 576],'Tag','viewEPSC',...
     'MenuBar','none','Toolbar','none','Name','Plot EPSC','NumberTitle','off',...
     'CloseRequestFcn',@viewCloseRequest,'WindowStyle','normal');
 %viewEPSC.UserData = {ephysFltr,protMeta,[]};
-%{
-%get toolbar
-viewToolbar = findall(viewEPSC,'Type','uitoolbar');
-%Remove unnecessary Toolbar elements
-pushTools = findall(viewEPSC,'Type','uipushtool');
-toggleTools = findall(viewEPSC,'Type','uitoggletool');
-brushTool = findall(viewEPSC,'Tag','Exploration.Brushing');
-%Reshape into copy tool
-copyTool = pushTools(1);
-copyTool.CData = toggleTools(3).CData;
-copyTool.Tag = 'viewCopyTool';
-copyTool.TooltipString = 'Copy current view to separate figure';
-copyTool.ClickedCallback = @viewCopyFigure;
 
-delete(pushTools([2:end])); delete(brushTool);
-delete(toggleTools([1:3,5]));
-%}
 % More robust toolbar
-viewToolbar = uitoolbar(viewEPSC);
-
-
-%Plot Edit
-%{
-icon = fullfile(matlabroot,'/toolbox/matlab/icons/help_fx.png');
-try
-    [tempCdata,~,alpha] = imread(icon);
-    tempCdata = double(tempCdata)./(2^16-1);
-    alphaFltr = alpha == 0;
-    for ii = 1:3
-        alphaCorr = tempCdata(:,:,ii);
-        alphaCorr(alphaFltr) = NaN;
-        tempCdata(:,:,ii) = alphaCorr;
-    end
-    sepr = 'off';
-catch %icon didnt exist, bummer
-    tempCdata = [];
-    sepr = 'on';
-end
-zoomOutTool = uipushtool(viewToolbar,'ClickedCallback',@(src,eventdata)plotedit(gcbf,'toggle'),...
-    'Separator',sepr,'Tag','Standard.EditPlot','TooltipString',...
-    'Edit Plot','CData',tempCdata);
-
-%}
-%Zoom In
-icon = fullfile(matlabroot,'/toolbox/matlab/icons/tool_zoom_in.png');
-try
-    [tempCdata,~,alpha] = imread(icon);
-    tempCdata = double(tempCdata)./(2^16-1);
-    alphaFltr = alpha == 0;
-    for ii = 1:3
-        alphaCorr = tempCdata(:,:,ii);
-        alphaCorr(alphaFltr) = NaN;
-        tempCdata(:,:,ii) = alphaCorr;
-    end
-    sepr = 'off';
-catch %icon didnt exist, bummer
-    tempCdata = [];
-    sepr = 'on';
-end
-zoomInTool = uitoggletool(viewToolbar,'ClickedCallback',@(src,eventdata)putdowntext('zoomin',gcbo),...
-    'Separator',sepr,'Tag','Exploration.ZoomIn','TooltipString',...
-    'Zoom In','CData',tempCdata);
-
-%Zoom Out
-icon = fullfile(matlabroot,'/toolbox/matlab/icons/tool_zoom_out.png');
-try
-    [tempCdata,~,alpha] = imread(icon);
-    tempCdata = double(tempCdata)./(2^16-1);
-    alphaFltr = alpha == 0;
-    for ii = 1:3
-        alphaCorr = tempCdata(:,:,ii);
-        alphaCorr(alphaFltr) = NaN;
-        tempCdata(:,:,ii) = alphaCorr;
-    end
-    sepr = 'off';
-catch %icon didnt exist, bummer
-    tempCdata = [];
-    sepr = 'on';
-end
-zoomOutTool = uitoggletool(viewToolbar,'ClickedCallback',@(src,eventdata)putdowntext('zoomout',gcbo),...
-    'Separator',sepr,'Tag','Exploration.ZoomOut','TooltipString',...
-    'Zoom Out','CData',tempCdata);
-
-%Pan Hand
-icon = fullfile(matlabroot,'/toolbox/matlab/icons/tool_hand.png');
-try
-    [tempCdata,~,alpha] = imread(icon);
-    tempCdata = double(tempCdata)./(2^16-1);
-    alphaFltr = alpha == 0;
-    for ii = 1:3
-        alphaCorr = tempCdata(:,:,ii);
-        alphaCorr(alphaFltr) = NaN;
-        tempCdata(:,:,ii) = alphaCorr;
-    end
-    sepr = 'off';
-catch %icon didnt exist bummer
-    tempCdata = [];
-    sepr = 'on';
-end
-panHandTool = uitoggletool(viewToolbar,'ClickedCallback',@(src,eventdata)putdowntext('pan',gcbo),...
-    'Separator',sepr,'Tag','Exploration.Pan','TooltipString',...
-    'Pan','CData',tempCdata);
-
-%Data Tip
-icon = fullfile(matlabroot,'/toolbox/matlab/icons/tool_data_cursor.png');
-try
-    [tempCdata,~,alpha] = imread(icon);
-    tempCdata = double(tempCdata)./(2^16-1);
-    alphaFltr = alpha == 0;
-    for ii = 1:3
-        alphaCorr = tempCdata(:,:,ii);
-        alphaCorr(alphaFltr) = NaN;
-        tempCdata(:,:,ii) = alphaCorr;
-    end
-    sepr = 'off';
-catch %icon didnt exist bummer
-    tempCdata = [];
-    sepr = 'on';
-end
-dataTipTool = uitoggletool(viewToolbar,'ClickedCallback',@(src,eventdata)putdowntext('datatip',gcbo),...
-    'Separator',sepr,'Tag','Exploration.DataCursor','TooltipString',...
-    'Data Cursor','CData',tempCdata);
-
-%Copy Figure
-icon = fullfile(matlabroot,'/toolbox/matlab/icons/tool_plot_linked.png');
-try
-    [copyCdata,~,alpha] = imread(icon);
-    copyCdata = double(copyCdata)./(2^16-1);
-    alphaFltr = alpha == 0;
-    for ii = 1:3
-        alphaCorr = copyCdata(:,:,ii);
-        alphaCorr(alphaFltr) = NaN;
-        copyCdata(:,:,ii) = alphaCorr;
-    end
-    sepr = 'off';
-catch %icon didnt exist bummer
-    copyCdata = [];
-    sepr = 'on';
-end
-copyTool = uipushtool(viewToolbar,'ClickedCallback',@viewCopyFigure,...
-    'Separator',sepr,'Tag','viewCopyTool','TooltipString',...
-    'Copy current view to separate figure','CData',copyCdata);
+viewGetToolbar(viewEPSC)
 
 
 
@@ -3515,7 +3376,11 @@ switch hObject.Tag
         hObject.String = num2str(stopNum);
     case 'viewMiniApply'
         %Sanitize found miniEvents and Sections
-        if ~isempty(miniTemp)
+        if isempty(tempCoord) %Nothing detect pretend we cancel
+            viewMiniAnalysisCheck.UserData = miniSetting;
+            closeWindow = true;
+            
+        elseif ~isempty(miniTemp)
             %Select only analyzed and sort
             [~,miniSort] = sort(miniTemp(logical(miniTemp(:,3)),1),1);
             miniTemp = miniTemp(miniSort,:);
@@ -3788,7 +3653,8 @@ switch hObject.Tag
         zoom(viewEPSC,'off')
         pan(viewEPSC,'off')
         datacursormode(viewEPSC,'off')
-        viewEPSC.ToolBar = 'none';
+        %Get rid of toolbar for now
+        delete(findobj(viewEPSC,'Tag','viewEPSC_Toolbar'));
         
         viewEPSC.WindowKeyPressFcn = @viewANN_pressKey;
         viewEPSC.WindowScrollWheelFcn = @viewANN_pressKey;
@@ -4477,7 +4343,9 @@ if closeWindow
     
     viewEPSC.WindowKeyPressFcn = '';
     viewEPSC.WindowScrollWheelFcn = '';
-    viewEPSC.ToolBar = 'figure';
+
+    %Get Toolbar
+    viewGetToolbar(viewEPSC)
     
     %Allow mini to close
     viewMiniGUI.CloseRequestFcn = @viewMini_Update;
@@ -6052,4 +5920,112 @@ if strcmp(yes,'Yes')
     end
     munlock; clear;
 end
+end
+
+function viewGetToolbar(viewEPSC)
+
+viewToolbar = uitoolbar(viewEPSC,'Tag','viewEPSC_Toolbar');
+
+%Zoom In
+icon = fullfile(matlabroot,'/toolbox/matlab/icons/tool_zoom_in.png');
+try
+    [tempCdata,~,alpha] = imread(icon);
+    tempCdata = double(tempCdata)./(2^16-1);
+    alphaFltr = alpha == 0;
+    for ii = 1:3
+        alphaCorr = tempCdata(:,:,ii);
+        alphaCorr(alphaFltr) = NaN;
+        tempCdata(:,:,ii) = alphaCorr;
+    end
+    sepr = 'off';
+catch %icon didnt exist, bummer
+    tempCdata = rand(16,16,3);
+    sepr = 'on';
+end
+zoomInTool = uitoggletool(viewToolbar,'ClickedCallback',@(src,eventdata)putdowntext('zoomin',gcbo),...
+    'Separator',sepr,'Tag','Exploration.ZoomIn','TooltipString',...
+    'Zoom In','CData',tempCdata);
+
+%Zoom Out
+icon = fullfile(matlabroot,'/toolbox/matlab/icons/tool_zoom_out.png');
+try
+    [tempCdata,~,alpha] = imread(icon);
+    tempCdata = double(tempCdata)./(2^16-1);
+    alphaFltr = alpha == 0;
+    for ii = 1:3
+        alphaCorr = tempCdata(:,:,ii);
+        alphaCorr(alphaFltr) = NaN;
+        tempCdata(:,:,ii) = alphaCorr;
+    end
+    sepr = 'off';
+catch %icon didnt exist, bummer
+    tempCdata = rand(16,16,3);
+    sepr = 'on';
+end
+zoomOutTool = uitoggletool(viewToolbar,'ClickedCallback',@(src,eventdata)putdowntext('zoomout',gcbo),...
+    'Separator',sepr,'Tag','Exploration.ZoomOut','TooltipString',...
+    'Zoom Out','CData',tempCdata);
+
+%Pan Hand
+icon = fullfile(matlabroot,'/toolbox/matlab/icons/tool_hand.png');
+try
+    [tempCdata,~,alpha] = imread(icon);
+    tempCdata = double(tempCdata)./(2^16-1);
+    alphaFltr = alpha == 0;
+    for ii = 1:3
+        alphaCorr = tempCdata(:,:,ii);
+        alphaCorr(alphaFltr) = NaN;
+        tempCdata(:,:,ii) = alphaCorr;
+    end
+    sepr = 'off';
+catch %icon didnt exist bummer
+    tempCdata = rand(16,16,3);
+    sepr = 'on';
+end
+panHandTool = uitoggletool(viewToolbar,'ClickedCallback',@(src,eventdata)putdowntext('pan',gcbo),...
+    'Separator',sepr,'Tag','Exploration.Pan','TooltipString',...
+    'Pan','CData',tempCdata);
+
+%Data Tip
+icon = fullfile(matlabroot,'/toolbox/matlab/icons/tool_data_cursor.png');
+try
+    [tempCdata,~,alpha] = imread(icon);
+    tempCdata = double(tempCdata)./(2^16-1);
+    alphaFltr = alpha == 0;
+    for ii = 1:3
+        alphaCorr = tempCdata(:,:,ii);
+        alphaCorr(alphaFltr) = NaN;
+        tempCdata(:,:,ii) = alphaCorr;
+    end
+    sepr = 'off';
+catch %icon didnt exist bummer
+    tempCdata = rand(16,16,3);
+    sepr = 'on';
+end
+%New Axes Function:@(e,d)datacursormode(ancestor(d.Source,'figure'),d.Value)
+%This does not work with matlab ui buttons though
+dataTipTool = uitoggletool(viewToolbar,'ClickedCallback',@(src,eventdata)putdowntext('datatip',gcbo),...
+    'Separator',sepr,'Tag','Exploration.DataCursor','TooltipString',...
+    'Data Cursor','CData',tempCdata);
+
+%Copy Figure
+icon = fullfile(matlabroot,'/toolbox/matlab/icons/tool_plot_linked.png');
+try
+    [copyCdata,~,alpha] = imread(icon);
+    copyCdata = double(copyCdata)./(2^16-1);
+    alphaFltr = alpha == 0;
+    for ii = 1:3
+        alphaCorr = copyCdata(:,:,ii);
+        alphaCorr(alphaFltr) = NaN;
+        copyCdata(:,:,ii) = alphaCorr;
+    end
+    sepr = 'off';
+catch %icon didnt exist bummer
+    copyCdata = rand(16,16,3);
+    sepr = 'on';
+end
+copyTool = uipushtool(viewToolbar,'ClickedCallback',@viewCopyFigure,...
+    'Separator',sepr,'Tag','viewCopyTool','TooltipString',...
+    'Copy current view to separate figure','CData',copyCdata);
+
 end
