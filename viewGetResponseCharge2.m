@@ -77,6 +77,14 @@ for i = 1:numel(chargeSettings)
         end
         p=p+1;
     end
+    %Get CorrTrace
+    artIdx = cell(size(artifactSettings{i}));
+    for v = 1:numel(artIdx)
+        [strts, stops] = viewGetArtifacts(fileData, fileSI, artifactSettings{i}{v});
+        artIdx{v} = [strts, stops];
+    end
+    
+    corrTrace = viewInterpArtifacts(artIdx,fileData);
     
     %Loop over blcks
     pulseCharge{i} = cell(size(artifactSetting));
@@ -91,8 +99,8 @@ for i = 1:numel(chargeSettings)
         minArt = round(min(diff(arts')));
         respStarts = arts(:,1)+minArt;
         
-        %Correct trace
-        [corrTrace] = viewInterpArtifacts(arts,fileData);
+        %Correct trace (Done outside of loop for all blocks at once)
+%         [corrTrace] = viewInterpArtifacts(arts,fileData);
         
         %Create Synchronous baseline
         syncStartX = respStarts(1:end);
