@@ -58,7 +58,16 @@ if decayLen < 5 %Other event too close mark it
 end
 
 normMini = (miniTrace((round(0.03/si):round(0.03/si+decayLen-1))+realX)-baseY)/(realY-baseY);
-[decayFit,gof,output] = fit((0:si:(decayLen-1)*si)',normMini,@(b,x)exp(b*x),...
+% [decayFit,gof,output] = fit((0:si*10:(decayLen-1)*si)',normMini(1:10:end),@(b,x)exp(b*x),...
+%     'StartPoint',-250,'Lower',-1500,'Upper',0,'DiffMinChange',1e-4,...
+%     'DiffMaxChange',1,'MaxIter',30);
+%Decimated
+if decayLen > 20
+    dec = floor(decayLen/20);
+else
+    dec =1;
+end
+[decayFit,gof,output] = fit((0:si*dec:(decayLen-1)*si)',normMini(1:dec:end),@(b,x)exp(b*x),...
     'StartPoint',-250,'Lower',-1500,'Upper',0,'DiffMinChange',1e-4,...
     'DiffMaxChange',1,'MaxIter',30);
 % normMini = (miniTrace((round(0.03/si):round(0.03/si+decayLen-1))+realX)-baseY);
@@ -70,6 +79,10 @@ normMini = (miniTrace((round(0.03/si):round(0.03/si+decayLen-1))+realX)-baseY)/(
 %     'Upper',[(realY-baseY)*0.9, 0],'DiffMinChange',1e-4,...
 %     'DiffMaxChange',1,'MaxIter',30);
 % plot(decayFit,(0:si:(decayLen-1)*si)',normMini);
+%Regression log fit
+% normMini(normMini <= 0) = min(normMini(normMini > 0));
+% decayFit2 = (0:si:(decayLen-1)*si)'\log(normMini);
+% postPeak2 = exp(decayFit2*(si:si:0.03-si+baseX*si)')*(realY-baseY);
 
 %calculate area
 %Assume linear rise time from base to peak, and use decay fit for
@@ -80,6 +93,11 @@ postPeak = decayFit(si:si:0.03-si+baseX*si)*(realY-baseY);
 fArea = sum([prePeak';postPeak])*si;
 sArea = sum(miniTrace((0.03/si:min([numel(miniTrace)-realX-baseX...
     ,0.06/si-1]))+realX+baseX)-baseY)*si;
+
+% %Test new method
+% postPeak2 = decayFit5(si:si:0.03-si+baseX*si)*(realY-baseY);
+% fArea2 = sum([prePeak';postPeak2])*si;
+% disp(['sArea:',num2str(sArea),' fArea:',num2str(fArea),' relDiff:',num2str(fArea2/fArea),' relDiff2:',num2str(fArea2/sArea)])
 
 decay50Y = prePeak(end)/2;
 decay50X = log(decay50Y/(realY-baseY))/decayFit.b;
