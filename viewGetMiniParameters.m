@@ -2,6 +2,11 @@ function [ coords, features, gof ] = viewGetMiniParameters( miniTrace, si, bDoub
 %VIEWGETMINIPARAMETERS Calculate basic mini parameters through fitting
 %   Correct peak location, find baseline (Baseline location from relative
 %   to realX, find decay tau
+
+%Hidden feature to extent baseline search (usefull for GABA minis)
+GABAminis = false;
+
+
 if ~exist('manualParameters','var') || isempty(manualParameters)
     manualParameters = 0;
 end
@@ -32,11 +37,20 @@ if manualParameters(1) == 1
     baseX = round(-(manualParameters(2)/si+realX));
     baseY = miniTrace(round(0.03/si+baseX));
 else
-    %Fit for baseline
+    %Fit 10ms before peak for baseline
     baseFit = fit((1:round(0.01/si))',miniTrace((round((0.02+si)/si):round(0.03/si))+realX),'poly6','Normalize','on');
     %plot(baseFit,(1:round(0.01/si))',miniTrace((round((0.02+si)/si):round(0.03/si))+realX));
-    preBase = round(min([0.005/si,preDistance]));
-    
+    if ~GABAminis
+        %standard find baseline in the first 5ms before peak
+        searchWindow = 0.005;
+        preBase = round(min([searchWindow/si,preDistance]));
+    else %Longer search window for baseline required 9ms?
+        %using the maximum (10ms) is not recommended because fit often
+        %starts with an extreme point before following the trace
+        
+        searchWindow = 0.009; %in seconds (max available from fit is 10ms)
+        preBase = round(min([searchWindow/si,preDistance]));
+    end
     %Get baseline
     [baseY,baseX] = max(baseFit(round(0.01/si):-1:round(0.01/si)-preBase));
     [~,adjBaseX] = min(abs(miniTrace(...
