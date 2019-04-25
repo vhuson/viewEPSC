@@ -1,5 +1,6 @@
 function [peakRaw, peakIdx, peakCorr, corrValue] = viewGetAmplitude2(dataNames,...
-    artifactSettings, amplitudeSettings, baselineSettings, allPath, ephysDB)
+    artifactSettings, amplitudeSettings, baselineSettings, allPath, ephysDB,...
+    chargeSettings)
 %VIEWGETAMPLITUDE2 returns amplitudes from viewGUI setting files
 
 %Single input corrections
@@ -8,6 +9,9 @@ if ~iscell(dataNames)
 end
 if ~iscell(amplitudeSettings)
     amplitudeSettings = {amplitudeSettings};
+end
+if nargin == 7 && ~iscell(chargeSettings)
+    chargeSettings = {chargeSettings};
 end
 if ~iscell(baselineSettings)
     baselineSettings = {baselineSettings};
@@ -42,6 +46,9 @@ for i = 1:numel(dataNames)
     end
     %Get trace info
     artifactSetting = artifactSettings{i};
+    if nargin == 7
+        chargeSetting = chargeSettings{i};
+    end
     filename = dataNames{i};
     dataPath = allPath{ephysDB(i)};
     %Get data and si
@@ -55,9 +62,23 @@ for i = 1:numel(dataNames)
             fileSI,artifactSetting{blck});
         
         %Adjust to search from stop to next start
-        lastFrame = artIdx(end,1) + (1/artifactSetting{blck}(3))/fileSI;
+        if nargin == 7 && ~isempty(chargeSetting) && chargeSetting(2,blck)>3
+            %We got charge setting use pulse width from there if a custom one is set
+            minArt = min(diff(artIdx,1,2));
+            lastFrame = artIdx(end,1)+minArt + (chargeSetting(2,blck)-3)/si;
+        else %just use the window until the next peak
+            lastFrame = artIdx(end,1) + (1/artifactSetting{blck}(3))/fileSI;
+        end
+        
         if lastFrame > numel(fileData); lastFrame = numel(fileData); end;
         if lastFrame < artIdx(end,2); lastFrame = artIdx(end,2)+1; end;
+        
+        if nargin == 7 && ~isempty(chargeSetting) && chargeSetting(2,blck)>3
+            %We got charge setting use pulse width from there if a custom one is set
+            peakFrames = [artIdx(:,2),[artIdx(1:end-1,1)+minArt+(chargeSetting(2,blck)-3)/si; lastFrame]];
+        else %just use the window until the next peak
+            peakFrames = [artIdx(:,2),[artIdx(2:end,1); lastFrame]];
+        end
         peakFrames = [artIdx(:,2),[artIdx(2:end,1); lastFrame]];
         
         peakRaw{i}(blck,:) = {zeros(size(peakFrames(:,1)))};

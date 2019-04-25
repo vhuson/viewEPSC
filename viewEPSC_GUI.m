@@ -2614,6 +2614,9 @@ else
     artifactSettings = getappdata(viewEPSC, 'artifactSettings');
     artifactSetting = artifactSettings{viewNamesDrop.Value};
     
+    chargeSettings = getappdata(viewEPSC, 'chargeSettings');
+    chargeSetting = chargeSettings{viewNamesDrop.Value};
+    
     amplitudeSetting = amplitudeSettings{viewNamesDrop.Value};
     
     filename = ampFltr{viewNamesDrop.Value,1};
@@ -2699,7 +2702,7 @@ else
         prevSel = findobj('Tag', 'viewSelPeakScatter');
         if ~isempty(prevSel); delete(prevSel); end;
         
-        peaks = viewGetAmplitude(fileData,dataTrace.XData(1),artifactSetting);
+        peaks = viewGetAmplitude(fileData,dataTrace.XData(1),artifactSetting,chargeSetting);
         
         %Create peak point scatter
         hold(viewPlot,'on')
@@ -3504,6 +3507,7 @@ function viewANN_Update(hObject,event)
 viewEPSC = findobj('Tag','viewEPSC');
 viewNamesDrop = findobj('Tag','viewNamesDrop');
 viewPlot = findobj('Tag','viewPlot');
+viewDataTrace = findobj('Tag','viewDataTrace');
 
 viewMiniGUI = findobj('Tag','viewMiniGUI');
 viewMiniAnalysisCheck = findobj('Tag','viewMiniAnalysisCheck');
@@ -3558,16 +3562,18 @@ viewANNDetectEdit = findobj('Tag','viewANNDetectEdit');
 viewANNCertEdit = findobj('Tag','viewANNCertEdit');
 
 %filedata
-ephysDB = getappdata(viewEPSC,'ephysDB');
-dataPath = getappdata(viewEPSC,'dataPath');
-dataPath = dataPath{ephysDB(viewNamesDrop.Value)};
-miniFltr = getappdata(viewEPSC,'ephysFltr');
-filename = miniFltr{viewNamesDrop.Value,1};
-fileData = retrieveEphys(filename,{'data','si'},...
-    dataPath);
-fileSI = fileData{2};
-if fileSI>1; fileSI = fileSI/1e6; end;
-fileData = fileData{1}(:,1);
+% ephysDB = getappdata(viewEPSC,'ephysDB');
+% dataPath = getappdata(viewEPSC,'dataPath');
+% dataPath = dataPath{ephysDB(viewNamesDrop.Value)};
+% miniFltr = getappdata(viewEPSC,'ephysFltr');
+% filename = miniFltr{viewNamesDrop.Value,1};
+% fileData = retrieveEphys(filename,{'data','si'},...
+%     dataPath);
+% fileSI = fileData{2};
+% if fileSI>1; fileSI = fileSI/1e6; end;
+% fileData = fileData{1}(:,1);
+fileData = viewDataTrace.YData';
+fileSI = viewDataTrace.XData(1);
 
 %Fix partial saved parameters
 if ~isempty(miniTarget) && all(miniTarget(:,1))
@@ -3752,8 +3758,8 @@ switch hObject.Tag
             bDouble=markFeature(i,9);
             
             
-            pre = max([1, markCoord(i,1)-0.03/fileSI+1]);
-            post = min([numel(fileData), pre-1+0.07/fileSI]);
+            pre = round(max([1, markCoord(i,1)-0.03/fileSI+1]));
+            post = round(min([numel(fileData), pre-1+0.07/fileSI]));
             
             if i+1 > size(markCoord,1)
                 distance = diff([markCoord(i,1),xStop/fileSI]);
@@ -3829,6 +3835,39 @@ switch hObject.Tag
         miniCoord = miniCoord(miniIdx,:);
         miniFeature = miniFeature(miniIdx,:);
         miniTarget = miniTarget(miniIdx,:);
+        
+        %Check for duplicate coords
+        [~,unqPos,~] = unique(miniCoord(:,1));
+        if numel(unqPos) < numel(miniCoord(:,1))
+            dupPos = unqPos(diff(unqPos)>1);
+            for ii = 1:numel(dupPos)
+                dupRange = dupPos(ii):dupPos(ii)+1;
+                if all(miniTarget(dupRange,1))
+                    %Both real events keep first one I guess
+                    dupEvent = 1;
+                elseif any(miniTarget(dupRange,1)) %just keep the only one
+                    dupEvent = miniTarget(dupRange,1);
+                else %No event so don't change anything
+                    dupEvent = [];
+                end
+                %Homogenize info if necessary
+                if ~isempty(dupEvent)
+                    %Copy all feature info and stuff
+                    miniFeature(dupRange,:) = [miniFeature(dupRange(dupEvent),:);...
+                        miniFeature(dupRange(dupEvent),:)];
+                    miniCoord(dupRange,:) = [miniCoord(dupRange(dupEvent),:);...
+                        miniCoord(dupRange(dupEvent),:)];
+                    miniTarget(dupRange,:) = [miniTarget(dupRange(dupEvent),:);...
+                        miniTarget(dupRange(dupEvent),:)];
+                end
+            end
+            eventDropUpdate = true;
+        end
+        %Keep only unique ones
+        miniCoord = miniCoord(unqPos,:);
+        miniFeature = miniFeature(unqPos,:);
+        miniTarget = miniTarget(unqPos,:);
+        
         
         %Advance position unless its the last one
         miniCurrIdx = min([miniCurrIdx+1,numel(viewANNEventDrop.String)]);
@@ -3937,6 +3976,38 @@ switch hObject.Tag
         miniCoord = miniCoord(miniIdx,:);
         miniFeature = miniFeature(miniIdx,:);
         miniTarget = miniTarget(miniIdx,:);
+        
+        %Check for duplicate coords
+        [~,unqPos,~] = unique(miniCoord(:,1));
+        if numel(unqPos) < numel(miniCoord(:,1))
+            dupPos = unqPos(diff(unqPos)>1);
+            for ii = 1:numel(dupPos)
+                dupRange = dupPos(ii):dupPos(ii)+1;
+                if all(miniTarget(dupRange,1))
+                    %Both real events keep first one I guess
+                    dupEvent = 1;
+                elseif any(miniTarget(dupRange,1)) %just keep the only one
+                    dupEvent = miniTarget(dupRange,1);
+                else %No event so don't change anything
+                    dupEvent = [];
+                end
+                %Homogenize info if necessary
+                if ~isempty(dupEvent)
+                    %Copy all feature info and stuff
+                    miniFeature(dupRange,:) = [miniFeature(dupRange(dupEvent),:);...
+                        miniFeature(dupRange(dupEvent),:)];
+                    miniCoord(dupRange,:) = [miniCoord(dupRange(dupEvent),:);...
+                        miniCoord(dupRange(dupEvent),:)];
+                    miniTarget(dupRange,:) = [miniTarget(dupRange(dupEvent),:);...
+                        miniTarget(dupRange(dupEvent),:)];
+                end
+            end
+            eventDropUpdate = true;
+        end
+        %Keep only unique ones
+        miniCoord = miniCoord(unqPos,:);
+        miniFeature = miniFeature(unqPos,:);
+        miniTarget = miniTarget(unqPos,:);
         
         %Advance position unless its the last one
         miniCurrIdx = min([miniCurrIdx+1,numel(viewANNEventDrop.String)]);
@@ -4091,20 +4162,53 @@ if freshDetect
         viewANNStatus.String = ['Calculating parameters. (',...
             num2str(i),'/',num2str(size(markCoord,1)),')'];
     end
+%     disp(string(mean(markFeature(:,7))))
     
     coord(target(:,1),:) = markCoord;
     largeFeatures(target(:,1),:) = markFeature;
     feature = largeFeatures;
     target = markTarget;
-    %Make sure we don't have duplicates
-    uniqueCoord = false(size(coord,1),1);
-    [~,unqIdx] = unique(coord(:,1));
-    uniqueCoord(unqIdx) = true;
     
-    %Remove first of non-uniques
-    coord = coord([uniqueCoord(2:end);true],:);
-    feature = feature([uniqueCoord(2:end);true],:);
-    target = target([uniqueCoord(2:end);true],:);
+    %Check for duplicate coords
+    [~,unqPos,~] = unique(coord(:,1));
+    if numel(unqPos) < numel(coord(:,1))
+        dupPos = unqPos(diff(unqPos)>1);
+        for ii = 1:numel(dupPos)
+            dupRange = dupPos(ii):dupPos(ii)+1;
+            if all(target(dupRange,1))
+                %Both real events keep first one I guess
+                dupEvent = 1;
+            elseif any(target(dupRange,1)) %just keep the only one
+                dupEvent = target(dupRange,1);
+            else %No event so don't change anything
+                dupEvent = [];
+            end
+            %Homogenize info if necessary
+            if ~isempty(dupEvent)
+                %Copy all feature info and stuff
+                feature(dupRange,:) = [feature(dupRange(dupEvent),:);...
+                    feature(dupRange(dupEvent),:)];
+                coord(dupRange,:) = [coord(dupRange(dupEvent),:);...
+                    coord(dupRange(dupEvent),:)];
+                target(dupRange,:) = [target(dupRange(dupEvent),:);...
+                    target(dupRange(dupEvent),:)];
+            end
+        end
+    end
+    %Keep only unique ones
+    coord = coord(unqPos,:);
+    feature = feature(unqPos,:);
+    target = target(unqPos,:);
+    
+%     %Make sure we don't have duplicates
+%     uniqueCoord = false(size(coord,1),1);
+%     [~,unqIdx] = unique(coord(:,1));
+%     uniqueCoord(unqIdx) = true;
+%     
+%     %Remove first of non-uniques
+%     coord = coord([uniqueCoord(2:end);true],:);
+%     feature = feature([uniqueCoord(2:end);true],:);
+%     target = target([uniqueCoord(2:end);true],:);
     
     if ~isempty(miniCoord)
         %find overlapping variables and remove from originals
@@ -5095,7 +5199,7 @@ elseif strcmp(hObject.Tag,'viewSaveSave')
                     ~isempty(artifactSettings{i}) &&...
                     ~isempty(baselineValues{i})
                 %We have values continue
-                peaks = viewGetAmplitude(dataTrace, si, artifactSettings{i});
+                peaks = viewGetAmplitude(dataTrace, si, artifactSettings{i},chargeSettings{i});
                 
                 corrPeaks = cell(1,size(peaks,1));
                 for v = 1:size(peaks,1)
@@ -5291,7 +5395,7 @@ elseif strcmp(hObject.Tag,'viewSaveSave')
         if saveChecks{3} %Raw amplitudes and index
             if ~isempty(artifactSettings{i})
                 %We have values continue
-                peaks = viewGetAmplitude(dataTrace, si, artifactSettings{i});
+                peaks = viewGetAmplitude(dataTrace, si, artifactSettings{i},chargeSettings{i});
                 
                 if ~singleFile
                     dataFile.AmpIdx = peaks;
@@ -5498,7 +5602,7 @@ elseif strcmp(hObject.Tag,'viewExportExport')
         %Get amplitude stuff
         [peakRaw, peakIdx, peakCorr] = viewGetAmplitude2(...
             viewNamesDrop.String, artifactSettings, amplitudeSettings,...
-            baselineValues, dataPath, ephysDB);
+            baselineValues, dataPath, ephysDB, chargeSettings);
         if flippedChecks(1)
             %Save corrected Peaks
             excelSheet(end+1) = {'Corrected Amplitude (pA)'};
