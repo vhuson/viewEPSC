@@ -65,7 +65,7 @@ for i = 1:numel(dataNames)
         if nargin == 7 && ~isempty(chargeSetting) && chargeSetting(2,blck)>3
             %We got charge setting use pulse width from there if a custom one is set
             minArt = min(diff(artIdx,1,2));
-            lastFrame = artIdx(end,1)+minArt + (chargeSetting(2,blck)-3)/si;
+            lastFrame = artIdx(end,1)+minArt + (chargeSetting(2,blck)-3)/fileSI;
         else %just use the window until the next peak
             lastFrame = artIdx(end,1) + (1/artifactSetting{blck}(3))/fileSI;
         end
@@ -75,7 +75,7 @@ for i = 1:numel(dataNames)
         
         if nargin == 7 && ~isempty(chargeSetting) && chargeSetting(2,blck)>3
             %We got charge setting use pulse width from there if a custom one is set
-            peakFrames = [artIdx(:,2),[artIdx(1:end-1,1)+minArt+(chargeSetting(2,blck)-3)/si; lastFrame]];
+            peakFrames = [artIdx(:,2),[artIdx(1:end-1,1)+minArt+(chargeSetting(2,blck)-3)/fileSI; lastFrame]];
         else %just use the window until the next peak
             peakFrames = [artIdx(:,2),[artIdx(2:end,1); lastFrame]];
         end
